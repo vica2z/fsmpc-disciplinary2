@@ -89,12 +89,26 @@ export default function App() {
   ];
 
   function spotBoxStyle(sp) {
-    // place box below the button if room, else above; align left within viewport
-    const vw = window.innerWidth, vh = window.innerHeight, bw = 380;
-    let left = Math.min(Math.max(12, sp.left + sp.width / 2 - bw / 2), vw - bw - 12);
-    const below = sp.top + sp.height + 12;
-    const style = { position: 'fixed', left, width: bw, margin: 0 };
-    if (below + 220 < vh) style.top = below; else style.bottom = vh - sp.top + 12;
+    const vw = window.innerWidth, vh = window.innerHeight, bw = 360, bh = 210, gap = 14;
+    const style = { position: 'fixed', width: bw, margin: 0 };
+    const spaceRight = vw - (sp.left + sp.width);
+    const spaceLeft = sp.left;
+    // Prefer placing to the SIDE of the button (so it clearly points at it)
+    if (spaceLeft >= bw + gap) {
+      // to the left of the button
+      style.left = sp.left - bw - gap;
+      style.top = Math.min(Math.max(12, sp.top + sp.height / 2 - bh / 2), vh - bh - 12);
+    } else if (spaceRight >= bw + gap) {
+      // to the right of the button
+      style.left = sp.left + sp.width + gap;
+      style.top = Math.min(Math.max(12, sp.top + sp.height / 2 - bh / 2), vh - bh - 12);
+    } else {
+      // stack below or above, centered on button, clamped to viewport
+      style.left = Math.min(Math.max(12, sp.left + sp.width / 2 - bw / 2), vw - bw - 12);
+      const below = sp.top + sp.height + gap;
+      if (below + bh < vh) style.top = below;
+      else style.top = Math.max(12, sp.top - bh - gap);
+    }
     return style;
   }
   useEffect(() => {
