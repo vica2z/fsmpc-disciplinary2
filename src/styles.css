@@ -355,3 +355,12 @@ h1 .infotip-bubble{font-size:12px}
 .nav-item.tour-hl{background:var(--gold)!important;color:var(--navy)!important;box-shadow:0 0 0 3px rgba(201,168,76,.5);position:relative;z-index:320}
 /* keep sidebar visible above the tour dim so the highlighted item shows */
 .tour-wrap.anchored ~ .app .sidebar,.app .sidebar{position:relative}
+
+/* Tour button spotlight */
+.tour-spot{position:fixed;z-index:305;border:3px solid var(--gold);border-radius:10px;box-shadow:0 0 0 4000px rgba(13,25,35,.55),0 0 18px rgba(201,168,76,.8);pointer-events:none;transition:all .2s ease}
+.tour-wrap.has-spot{background:transparent;pointer-events:none}
+.tour-wrap.has-spot .tour-box{pointer-events:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+
+/* persistent common-questions strip */
+.chat-suggest{border-top:1px solid var(--border);padding:8px 10px;background:#fff;max-height:118px;overflow-y:auto}
+.chat-chips{display:flex;flex-direction:column;gap:5px}

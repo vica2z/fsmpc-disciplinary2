@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { OFFENCES, CATS, CAT_ICON, EMP, EXECUTIVES, SMT_MEMBERS, APPRAISAL_STATUSES, appraisalStatus, apprStatusClass, COUNSEL_OUTCOMES, PROPERTY_ITEMS, PEN_ORDER, ROLES, STEPS, PANEL_GUIDE, ROLE_NAV, ROLE_ORDER } from './data/model';
 import {
   offByN, occurrenceFor, occLabel, rangeForOcc,
@@ -14,6 +14,7 @@ export default function App() {
   const nav = ROLE_NAV[role];
   const [view, setView] = useState(nav[0].id);
   const [tour, setTour] = useState(0);   // 0 = off, else step number (1-based)
+  const [spot, setSpot] = useState(null); // {top,left,width,height} of highlighted button
 
   function switchRole(r) { setRole(r); setView(ROLE_NAV[r][0].id); }
 
@@ -33,17 +34,26 @@ export default function App() {
     // LINE MANAGER
     { t: 'Line Manager', d: 'The supervisor. Cases begin here. We’ll go through each panel.', role: 'lm', view: 'lm-queue', nav: 'My Team' },
     { t: 'LM · My Team', d: 'Your drafted and submitted cases, with their status. Drafts can be submitted to HR or deleted, and you can flag/unflag serious. On a dismissal, a “Retrieve property” card appears to record returned company property.', role: 'lm', view: 'lm-queue', nav: 'My Team' },
+    { t: 'Button · Raise a case', d: 'Starts a new formal case for a team member.', role: 'lm', view: 'lm-queue', sel: '[data-tour=\"lm-raise-btn\"]' },
     { t: 'LM · Counselling', d: 'The informal first step. Log a counselling chat (issue, discussion, outcome: Resolved or Verbal admonishment). If it doesn’t resolve, “Escalate” turns it into a formal case — carrying the notes and offences forward.', role: 'lm', view: 'lm-counsel', nav: 'Counselling' },
+    { t: 'Button · Log counselling', d: 'Records an informal counselling chat with an employee.', role: 'lm', view: 'lm-counsel', sel: '[data-tour=\"log-counsel\"]' },
     { t: 'LM · Raise a Case', d: 'Raise a formal case. Pick the employee — a red flag shows if they already have an open case, and you’ll see their open + past cases with “View history”. Add one or more offences (each with its own occurrence, range and recommendation), attach evidence, and flag serious offences. A reminder suggests counselling first for minor matters.', role: 'lm', view: 'lm-raise', nav: 'Raise a Case' },
     { t: 'LM · Table of Charges', d: 'A read-only reference of every offence and its penalty range, so the LM can check before raising a case.', role: 'lm', view: 'charges', nav: 'Table of Charges' },
 
     // HR MANAGER
     { t: 'HR Manager', d: 'The core engine — HR investigates and decides, or forwards serious cases up.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'HR · HR Queue', d: 'Cases needing action, in order: Investigate → Issue notice → Record response → Record decision. A red banner appears if a serious offence is reported. Serious cases can be forwarded to the CEO or SMT.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'Button · Investigate / action', d: 'This is the main action button for the case at the top of the queue. Depending on the case stage it reads Investigate, Issue notice, Record response, or Record decision — the next step HR must take.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"hr-action\"]' },
+    { t: 'Button · Jury of Peers', d: 'On an investigated serious case, this convenes the impartial peer panel and records its finding and recommendation.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"jury\"]' },
+    { t: 'Button · Forward to CEO', d: 'Sends the case directly to the CEO for a final decision (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-ceo\"]' },
+    { t: 'Button · Forward to SMT', d: 'Sends the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-smt\"]' },
+    { t: 'Button · Letter', d: 'Generates the formatted disciplinary notice for the case — auto-filled and printable.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"letter\"]' },
     { t: 'HR · Investigation', d: 'Before any notice, HR investigates: findings, discussion with the line manager and employee, witnesses (name + statement), and uploaded document/image evidence. Only after saving can a notice be issued.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'HR · Jury of Peers', d: 'For a serious case, HR can convene an impartial peer panel: members, a finding (substantiated / partly / not), and a recommended action. It’s advisory and travels with the case.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'HR · Forward to CEO / SMT', d: 'Serious cases can be forwarded straight to the CEO, or to a chosen SMT member for a recommendation. HR must give an overall recommendation (mandatory). The CEO makes the final decision.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'HR · All Cases', d: 'Every case in one place, with a Documents column. “View” opens the full case history; “Letter” generates the disciplinary notice; on closed cases, “Personnel Form” generates the PAF for payroll.', role: 'hr', view: 'hr-all', nav: 'All Cases' },
+    { t: 'Button · View', d: 'Opens the full case history for any case — counselling, investigation, witnesses, evidence, recommendations, decision and the audit trail.', role: 'hr', view: 'hr-all', sel: '[data-tour=\"view\"]' },
+    { t: 'Button · Personnel Form (PAF)', d: 'On a closed case, generates the Personnel Action Form for payroll.', role: 'hr', view: 'hr-all', sel: '[data-tour=\"paf\"]' },
     { t: 'HR · Counselling Log', d: 'A read-only view of all counselling recorded by line managers — so HR sees issues being managed early.', role: 'hr', view: 'counsel-log', nav: 'Counselling Log' },
     { t: 'HR · Weekly CEO Report', d: 'A summary of all disciplinary activity — open, closed and dismissals — for executive review.', role: 'hr', view: 'report', nav: 'Weekly CEO Report' },
 
@@ -61,18 +71,48 @@ export default function App() {
     // SMT
     { t: 'SMT (Senior Management Team)', d: 'Reviews cases HR forwards and recommends to the CEO.', role: 'smt', view: 'smt-queue', nav: 'SMT Referrals' },
     { t: 'SMT · SMT Referrals', d: 'Cases HR forwarded to you, showing HR’s recommendation and all offences. “View full case history” shows everything; then recommend an action + rationale to the CEO (both mandatory).', role: 'smt', view: 'smt-queue', nav: 'SMT Referrals' },
+    { t: 'Button · Recommend to CEO', d: 'Records the SMT’s recommended action and rationale and sends the case to the CEO.', role: 'smt', view: 'smt-queue', sel: '[data-tour=\"smt-rec\"]' },
     { t: 'SMT · Recommended', d: 'Cases the SMT has already recommended on, with the CEO’s final decision once made.', role: 'smt', view: 'smt-decided', nav: 'Recommended' },
 
     // CEO
     { t: 'CEO', d: 'The final decision-maker.', role: 'ceo', view: 'ceo-referrals', nav: 'Referrals' },
     { t: 'CEO · Referrals', d: 'Cases forwarded by HR (directly) or via the SMT, showing both recommendations. “View full case history”, then “Make final decision” within range — which closes the case.', role: 'ceo', view: 'ceo-referrals', nav: 'Referrals' },
+    { t: 'Button · View full case history', d: 'Opens the complete record of the referred case before you decide.', role: 'ceo', view: 'ceo-referrals', sel: '[data-tour=\"view-hist\"]' },
+    { t: 'Button · Make final decision', d: 'Records the CEO’s final action within the offence range and closes the case.', role: 'ceo', view: 'ceo-referrals', sel: '[data-tour=\"ceo-decide\"]' },
     { t: 'CEO · Re-instatement', d: 'Re-establish a previously dismissed employee back into payroll — record a reason and effective date. Only the CEO can do this.', role: 'ceo', view: 'ceo-reinstate', nav: 'Re-instatement' },
+    { t: 'Button · Re-establish to payroll', d: 'Reverses a dismissal and restores the employee to payroll.', role: 'ceo', view: 'ceo-reinstate', sel: '[data-tour=\"reestablish\"]' },
     { t: 'CEO · Reports & Audit', d: 'The CEO also has the Weekly Report, the Counselling Log and the full Audit Log for oversight.', role: 'ceo', view: 'report', nav: 'Weekly Report' },
 
     // WRAP
     { t: 'How it works & Help', d: 'Every role has a “How it works” walkthrough. You can also use the 💬 Help chatbox (bottom-right) to ask questions anytime.', role: 'lm', view: 'howto', nav: 'How it works' },
     { t: 'That’s the whole system', d: 'Serious flow: LM raises → HR investigates (+jury) → forward → SMT recommends → CEO decides → Letter + PAF. Routine flow: LM raises → HR investigates → notice → Staff responds → HR decides. Every action is logged; hover any “i” for on-screen help.' },
   ];
+
+  function spotBoxStyle(sp) {
+    // place box below the button if room, else above; align left within viewport
+    const vw = window.innerWidth, vh = window.innerHeight, bw = 380;
+    let left = Math.min(Math.max(12, sp.left + sp.width / 2 - bw / 2), vw - bw - 12);
+    const below = sp.top + sp.height + 12;
+    const style = { position: 'fixed', left, width: bw, margin: 0 };
+    if (below + 220 < vh) style.top = below; else style.bottom = vh - sp.top + 12;
+    return style;
+  }
+  useEffect(() => {
+    if (!tour) { setSpot(null); return; }
+    const step = TOUR[tour - 1];
+    if (!step.sel) { setSpot(null); return; }
+    let tries = 0;
+    const find = () => {
+      const el = document.querySelector(step.sel);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setTimeout(() => { const r = el.getBoundingClientRect(); setSpot({ top: r.top, left: r.left, width: r.width, height: r.height }); }, 250);
+      } else if (tries++ < 12) { setTimeout(find, 100); }
+      else setSpot(null);
+    };
+    const id = setTimeout(find, 200);
+    return () => clearTimeout(id);
+  }, [tour]);
 
   function startTour() { const s = TOUR[0]; setTour(1); if (s.role) switchRole(s.role); }
   function goTour(n) {
@@ -85,9 +125,12 @@ export default function App() {
 
   return (
     <>
+      {tour > 0 && spot && (
+        <div className="tour-spot" style={{ top: spot.top - 6, left: spot.left - 6, width: spot.width + 12, height: spot.height + 12 }} />
+      )}
       {tour > 0 && (
-        <div className={"tour-wrap" + (TOUR[tour - 1].nav ? " anchored" : "")}>
-          <div className="tour-box">
+        <div className={"tour-wrap" + (TOUR[tour - 1].nav && !spot ? " anchored" : "") + (spot ? " has-spot" : "")}>
+          <div className="tour-box" style={spot ? spotBoxStyle(spot) : undefined}>
             {TOUR[tour - 1].nav && <div className="tour-pointer">◀ {TOUR[tour - 1].nav}</div>}
             <div className="tour-step">Step {tour} of {TOUR.length}</div>
             <h3 className="tour-title">{TOUR[tour - 1].t}</h3>
@@ -267,7 +310,7 @@ function LMQueue({ store, setView }) {
   return (
     <div className="page">
       <PageHead title="My Team — Disciplinary" info="The cases you have raised or are drafting, and property to retrieve when staff are dismissed." sub="Cases you have raised or are drafting"
-        right={<button className="btn btn-navy" onClick={() => setView('lm-raise')}>+ Raise a case</button>} />
+        right={<button className="btn btn-navy" data-tour="lm-raise-btn" onClick={() => setView('lm-raise')}>+ Raise a case</button>} />
       <GuideBanner view="lm-queue" />
       <Card title="Your cases" sub="Drafts and cases now with HR">
         {mine.length ? (
@@ -825,7 +868,7 @@ function HRQueue({ store }) {
               return (
                 <div key={c.id} className="serious-alert-row">
                   <div><b>{c.id}</b> · {e?.name} — {o?.name}</div>
-                  <TipBtn tip="Confirm HR has seen the serious-offence alert and is acting on it." className="btn btn-sm btn-navy" onClick={() => store.acknowledgeSerious(c.id)}>Acknowledge</TipBtn>
+                  <TipBtn tip="Confirm HR has seen the serious-offence alert and is acting on it." dt="ack" className="btn btn-sm btn-navy" onClick={() => store.acknowledgeSerious(c.id)}>Acknowledge</TipBtn>
                 </div>
               );
             })}
@@ -854,16 +897,16 @@ function HRQueue({ store }) {
                         <TipBtn tip="Open the investigation: record findings, discussions, witnesses and evidence before any notice is issued." className="btn btn-sm btn-navy" onClick={() => setInvestigating(c)}>Investigate</TipBtn>}
                       {c.status === 'With HR' && c.investigation && <>
                         <TipBtn tip="Re-open the saved investigation to review or edit findings, witnesses and evidence." className="btn btn-sm btn-ghost" onClick={() => setInvestigating(c)}>Investigation</TipBtn>
-                        <TipBtn tip="Activate an impartial peer panel to give an independent finding and recommendation on a serious case." className="btn btn-sm btn-ghost" onClick={() => setJuring(c)}>{c.jury?.active ? 'Jury ✓' : 'Jury of Peers'}</TipBtn>
-                        <TipBtn tip="Send the case straight to the CEO for a final decision (HR recommendation required)." className="btn btn-sm btn-navy" onClick={() => setForwarding({ c, to: 'CEO' })}>Forward to CEO</TipBtn>
-                        <TipBtn tip="Send the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required)." className="btn btn-sm btn-navy" onClick={() => setForwarding({ c, to: 'SMT' })}>Forward to SMT</TipBtn>
+                        <TipBtn tip="Activate an impartial peer panel to give an independent finding and recommendation on a serious case." dt="jury" className="btn btn-sm btn-ghost" onClick={() => setJuring(c)}>{c.jury?.active ? 'Jury ✓' : 'Jury of Peers'}</TipBtn>
+                        <TipBtn tip="Send the case straight to the CEO for a final decision (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-ceo" onClick={() => setForwarding({ c, to: 'CEO' })}>Forward to CEO</TipBtn>
+                        <TipBtn tip="Send the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-smt" onClick={() => setForwarding({ c, to: 'SMT' })}>Forward to SMT</TipBtn>
                       </>}
                       {c.status !== 'With HR' &&
                         <TipBtn tip="Issue notice starts the 5-day response window; Record response captures the employee\u2019s reply; Record decision sets the final action and closes the case." className="btn btn-sm btn-navy" onClick={() => setActing({ c, action: na })}>{na.label}</TipBtn>}
                       {['Awaiting Response','Awaiting Decision','Closed'].includes(c.status) &&
-                        <TipBtn tip="Generate a formatted disciplinary notice, auto-filled from the case, to print or save as PDF." className="btn btn-sm btn-ghost" onClick={() => setLettering(c)}>Letter</TipBtn>}
+                        <TipBtn tip="Generate a formatted disciplinary notice, auto-filled from the case, to print or save as PDF." className="btn btn-sm btn-ghost" dt="letter" onClick={() => setLettering(c)}>Letter</TipBtn>}
                       {c.status === 'Closed' &&
-                        <TipBtn tip="Generate the Personnel Action Form (PAF) for payroll on a closed case." className="btn btn-sm btn-ghost" onClick={() => setPaffing(c)}>Personnel Form</TipBtn>}
+                        <TipBtn tip="Generate the Personnel Action Form (PAF) for payroll on a closed case." className="btn btn-sm btn-ghost" dt="paf" onClick={() => setPaffing(c)}>Personnel Form</TipBtn>}
                       {c.status === 'Closed' &&
                         <TipBtn tip="Generate the Personnel Action Form for payroll on this closed case." className="btn btn-sm btn-ghost" onClick={() => setPafing(c)}>PAF</TipBtn>}
                     </td>
@@ -1316,9 +1359,9 @@ function HRAll({ store }) {
                   <td><span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span></td>
                   <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.outcome && <div className="sub">{c.outcome}</div>}</td>
                   <td className="row-actions">
-                    <TipBtn tip="Open the full case history: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" onClick={() => setViewing(c)}>View</TipBtn>
-                    {canLetter && <TipBtn tip="Generate a formatted disciplinary notice, auto-filled from the case, to print or save as PDF." className="btn btn-sm btn-ghost" onClick={() => setLettering(c)}>Letter</TipBtn>}
-                    {c.status === 'Closed' && <TipBtn tip="Generate the Personnel Action Form (PAF) for payroll on a closed case." className="btn btn-sm btn-ghost" onClick={() => setPaffing(c)}>Personnel Form</TipBtn>}
+                    <TipBtn tip="Open the full case history: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" dt="view" onClick={() => setViewing(c)}>View</TipBtn>
+                    {canLetter && <TipBtn tip="Generate a formatted disciplinary notice, auto-filled from the case, to print or save as PDF." className="btn btn-sm btn-ghost" dt="letter" onClick={() => setLettering(c)}>Letter</TipBtn>}
+                    {c.status === 'Closed' && <TipBtn tip="Generate the Personnel Action Form (PAF) for payroll on a closed case." className="btn btn-sm btn-ghost" dt="paf" onClick={() => setPaffing(c)}>Personnel Form</TipBtn>}
                   </td>
                 </tr>
               );
@@ -1529,8 +1572,8 @@ function CEOReferrals({ store }) {
             )}
             <div className="notice-actions">
               <span className="pill st-ceo">With CEO</span>
-              <TipBtn tip="Open the full case record: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" onClick={() => setHistory(c)}>View full case history</TipBtn>
-              <TipBtn tip="Record the CEO\u2019s final action, within the offence range. Closes the case." className="btn btn-sm btn-navy" onClick={() => setDeciding(c)}>Make final decision</TipBtn>
+              <TipBtn tip="Open the full case record: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" dt="view-hist" onClick={() => setHistory(c)}>View full case history</TipBtn>
+              <TipBtn tip="Record the CEO\u2019s final action, within the offence range. Closes the case." className="btn btn-sm btn-navy" dt="ceo-decide" onClick={() => setDeciding(c)}>Make final decision</TipBtn>
             </div>
           </Card>
         );
@@ -1810,8 +1853,8 @@ function SMTQueue({ store }) {
             </div>
             <div className="notice-actions">
               <span className="pill st-smt">With SMT</span>
-              <TipBtn tip="Open the full case record: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" onClick={() => setHistory(c)}>View full case history</TipBtn>
-              <TipBtn tip="Record the SMT\u2019s recommended action and rationale (required) and send to the CEO." className="btn btn-sm btn-navy" onClick={() => setReccing(c)}>Recommend to CEO</TipBtn>
+              <TipBtn tip="Open the full case record: counselling, investigation, witnesses, evidence, recommendations and audit trail." className="btn btn-sm btn-ghost" dt="view-hist" onClick={() => setHistory(c)}>View full case history</TipBtn>
+              <TipBtn tip="Record the SMT\u2019s recommended action and rationale (required) and send to the CEO." className="btn btn-sm btn-navy" dt="smt-rec" onClick={() => setReccing(c)}>Recommend to CEO</TipBtn>
             </div>
           </Card>
         );
@@ -2179,10 +2222,10 @@ function InfoTip({ text }) {
     </span>
   );
 }
-function TipBtn({ tip, className, onClick, children }) {
+function TipBtn({ tip, className, onClick, children, dt }) {
   return (
     <span className="tipbtn">
-      <button className={className} onClick={onClick}>{children}</button>
+      <button className={className} onClick={onClick} data-tour={dt}>{children}</button>
       <InfoTip text={tip} />
     </span>
   );
@@ -2236,14 +2279,14 @@ function HelpChat() {
           <div className="chat-head"><b>Help</b><span className="sub" style={{ color: '#cbd5e1' }}>Ask about the app flow</span><button className="chat-x" onClick={() => setOpen(false)}>×</button></div>
           <div className="chat-body">
             {msgs.map((m, i) => <div key={i} className={'chat-msg ' + m.from}>{m.text}</div>)}
-            {msgs.length === 1 && (
-              <div className="chat-suggest">
-                <div className="chat-suggest-h">Try asking:</div>
-                {['How do I raise a case?','What is a Jury of Peers?','Can an employee appeal?','What happens after the employee responds?','Who makes the final decision?','How does forwarding to SMT work?','What is the PAF?','How is company property retrieved?','How do I re-instate an employee?','What do the penalty codes mean?','What are the seven roles?','What is the full process flow?'].map((s2, i) => (
-                  <button key={i} className="chat-chip" onClick={() => { const a = helpAnswer(s2); setMsgs(m => [...m, { from: 'you', text: s2 }, { from: 'bot', text: a }]); }}>{s2}</button>
-                ))}
-              </div>
-            )}
+          </div>
+          <div className="chat-suggest">
+            <div className="chat-suggest-h">Common questions</div>
+            <div className="chat-chips">
+              {['How do I raise a case?','What is a Jury of Peers?','Can an employee appeal?','What happens after the employee responds?','Who makes the final decision?','How does forwarding to SMT work?','What is the PAF?','How is company property retrieved?','How do I re-instate an employee?','What do the penalty codes mean?','What are the seven roles?','What is the full process flow?'].map((s2, i) => (
+                <button key={i} className="chat-chip" onClick={() => { const a = helpAnswer(s2); setMsgs(m => [...m, { from: 'you', text: s2 }, { from: 'bot', text: a }]); }}>{s2}</button>
+              ))}
+            </div>
           </div>
           <div className="chat-in">
             <input className="input" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder="Type your question…" />
