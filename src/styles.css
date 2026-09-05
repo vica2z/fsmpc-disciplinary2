@@ -18,7 +18,7 @@ button{font-family:var(--font)}
 .app{display:flex;height:100vh;overflow:hidden}
 
 /* ── Sidebar (navy, gold accents) ── */
-.sidebar{width:224px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar{width:224px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:relative;z-index:310}
 .brand{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:11px}
 .brand-mark{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0}
 .brand-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:.02em}
@@ -341,3 +341,17 @@ h1 .infotip-bubble{font-size:12px}
 .chat-msg.you{background:var(--navy);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .chat-in{display:flex;gap:6px;padding:10px;border-top:1px solid var(--border)}
 .chat-in .input{flex:1}
+
+/* Chat suggestion chips */
+.chat-suggest{margin-top:4px}
+.chat-suggest-h{font-size:11px;font-weight:800;text-transform:uppercase;color:var(--muted);margin:4px 0 6px}
+.chat-chip{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--border);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--navy);cursor:pointer;margin-bottom:5px}
+.chat-chip:hover{background:var(--cream);border-color:var(--navy)}
+
+/* Tour anchored to nav */
+.tour-wrap.anchored{align-items:flex-start;justify-content:flex-start;padding:0;background:rgba(13,25,35,.35)}
+.tour-wrap.anchored .tour-box{margin:120px 0 0 244px}
+.tour-pointer{font-size:11px;font-weight:800;color:var(--gold-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.nav-item.tour-hl{background:var(--gold)!important;color:var(--navy)!important;box-shadow:0 0 0 3px rgba(201,168,76,.5);position:relative;z-index:320}
+/* keep sidebar visible above the tour dim so the highlighted item shows */
+.tour-wrap.anchored ~ .app .sidebar,.app .sidebar{position:relative}

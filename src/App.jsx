@@ -21,20 +21,57 @@ export default function App() {
 
   // Guided tour steps — each can jump to a role/view
   const TOUR = [
-    { t: 'Welcome to the FSMPC Disciplinary System', d: 'This quick tour walks you through the whole system, role by role. Use Next and Back to move. You can stop anytime.', },
-    { t: 'Switching roles', d: 'Everyone works from one shared set of cases. Use this “Viewing as” bar to switch between the seven roles and follow a case end-to-end.', },
-    { t: 'ICT Admin — sets up the system', d: 'ICT configures the system: System Setup, the Table of Charges (offences + penalties, with categories and pagination) and the Audit Log. Employees are managed in HR.', role: 'ict', view: 'setup' },
-    { t: 'Table of Charges', d: 'Every recognised offence with its penalty by occurrence: A = verbal, R = written warning, S# = suspension days, D = dismissal. Add offences and categories here.', role: 'ict', view: 'charges' },
-    { t: 'Line Manager — Counselling', d: 'The informal first step. Log a counselling chat before any formal case. If it doesn’t resolve, it can be escalated into a case (notes carry forward).', role: 'lm', view: 'lm-counsel' },
-    { t: 'Line Manager — Raise a Case', d: 'Raise a formal case: pick the employee (a red flag shows if they already have an open case), add one or more offences, attach evidence, flag serious offences. A reminder suggests counselling first for minor matters.', role: 'lm', view: 'lm-raise' },
-    { t: 'HR Manager — HR Queue', d: 'The core engine. Cases arrive here in order: Investigate → Issue notice → Record response → Record decision. Serious cases can be forwarded to the CEO or SMT.', role: 'hr', view: 'hr-queue' },
-    { t: 'HR — Investigation & Jury of Peers', d: 'Before any notice, HR investigates: findings, discussions, witnesses and evidence. For serious cases HR can convene an advisory Jury of Peers.', role: 'hr', view: 'hr-queue' },
-    { t: 'HR — All Cases, Letters & Forms', d: 'Every case in one place. Generate the disciplinary Letter and, on closed cases, the Personnel Action Form (PAF) for payroll. “View” opens the full case history.', role: 'hr', view: 'hr-all' },
-    { t: 'Staff — My Notices', d: 'The employee’s view. They receive the charge and give their response within 5 working days. The response is part of the decision — considered before management decides.', role: 'staff', view: 'staff-notices' },
-    { t: 'SMT — recommends to the CEO', d: 'When HR forwards a serious case to the SMT, the assigned member reviews the full history and gives a recommendation and rationale to the CEO (mandatory).', role: 'smt', view: 'smt-queue' },
-    { t: 'CEO — final decision', d: 'The CEO is the final decision-maker on forwarded cases (sees HR and SMT recommendations), and can re-establish a previously terminated employee to payroll.', role: 'ceo', view: 'ceo-referrals' },
-    { t: 'Executive Member — oversight', d: 'Each executive watches their portfolio: staff, appraisals, counselling and discipline. Read-only oversight — they monitor, they don’t act.', role: 'exec', view: 'exec-portfolio' },
-    { t: 'That’s the whole system', d: 'Serious: LM raises → HR investigates (+jury) → Forward → SMT recommends → CEO decides → Letter + PAF. Routine: LM raises → HR investigates → notice → Staff responds → HR decides. Every action is logged. Hover any “i” for on-screen help.', },
+    { t: 'Welcome', d: 'This guided tour walks through every panel and action in the system, role by role. Use Next and Back to move; you can skip anytime. The highlighted menu item shows where you are.' },
+    { t: 'Switching roles', d: 'Everyone works from one shared set of cases. Use the “Viewing as” bar at the top to switch between the seven roles. In real use each person sees only their own role.' },
+
+    // ICT ADMIN
+    { t: 'ICT Admin', d: 'ICT sets up and maintains the system. We’ll look at each of its panels.', role: 'ict', view: 'setup', nav: 'System Setup' },
+    { t: 'ICT · System Setup', d: 'A one-time configuration checklist — charges, roles, working-day timers and audit logging. Confirms the system is ready. Read-only.', role: 'ict', view: 'setup', nav: 'System Setup' },
+    { t: 'ICT · Table of Charges', d: 'The master list of offences and their penalties by occurrence (A = verbal, R = written, S# = suspension days, D = dismissal). Add offences with “+ Add offence” and new categories with “+ Add category”. Shows 10 per page.', role: 'ict', view: 'charges', nav: 'Table of Charges' },
+    { t: 'ICT · Audit Log', d: 'A permanent record of every action taken in the system — role, timestamp and case reference. Read-only.', role: 'ict', view: 'audit', nav: 'Audit Log' },
+
+    // LINE MANAGER
+    { t: 'Line Manager', d: 'The supervisor. Cases begin here. We’ll go through each panel.', role: 'lm', view: 'lm-queue', nav: 'My Team' },
+    { t: 'LM · My Team', d: 'Your drafted and submitted cases, with their status. Drafts can be submitted to HR or deleted, and you can flag/unflag serious. On a dismissal, a “Retrieve property” card appears to record returned company property.', role: 'lm', view: 'lm-queue', nav: 'My Team' },
+    { t: 'LM · Counselling', d: 'The informal first step. Log a counselling chat (issue, discussion, outcome: Resolved or Verbal admonishment). If it doesn’t resolve, “Escalate” turns it into a formal case — carrying the notes and offences forward.', role: 'lm', view: 'lm-counsel', nav: 'Counselling' },
+    { t: 'LM · Raise a Case', d: 'Raise a formal case. Pick the employee — a red flag shows if they already have an open case, and you’ll see their open + past cases with “View history”. Add one or more offences (each with its own occurrence, range and recommendation), attach evidence, and flag serious offences. A reminder suggests counselling first for minor matters.', role: 'lm', view: 'lm-raise', nav: 'Raise a Case' },
+    { t: 'LM · Table of Charges', d: 'A read-only reference of every offence and its penalty range, so the LM can check before raising a case.', role: 'lm', view: 'charges', nav: 'Table of Charges' },
+
+    // HR MANAGER
+    { t: 'HR Manager', d: 'The core engine — HR investigates and decides, or forwards serious cases up.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'HR · HR Queue', d: 'Cases needing action, in order: Investigate → Issue notice → Record response → Record decision. A red banner appears if a serious offence is reported. Serious cases can be forwarded to the CEO or SMT.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'HR · Investigation', d: 'Before any notice, HR investigates: findings, discussion with the line manager and employee, witnesses (name + statement), and uploaded document/image evidence. Only after saving can a notice be issued.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'HR · Jury of Peers', d: 'For a serious case, HR can convene an impartial peer panel: members, a finding (substantiated / partly / not), and a recommended action. It’s advisory and travels with the case.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'HR · Forward to CEO / SMT', d: 'Serious cases can be forwarded straight to the CEO, or to a chosen SMT member for a recommendation. HR must give an overall recommendation (mandatory). The CEO makes the final decision.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
+    { t: 'HR · All Cases', d: 'Every case in one place, with a Documents column. “View” opens the full case history; “Letter” generates the disciplinary notice; on closed cases, “Personnel Form” generates the PAF for payroll.', role: 'hr', view: 'hr-all', nav: 'All Cases' },
+    { t: 'HR · Counselling Log', d: 'A read-only view of all counselling recorded by line managers — so HR sees issues being managed early.', role: 'hr', view: 'counsel-log', nav: 'Counselling Log' },
+    { t: 'HR · Weekly CEO Report', d: 'A summary of all disciplinary activity — open, closed and dismissals — for executive review.', role: 'hr', view: 'report', nav: 'Weekly CEO Report' },
+
+    // STAFF
+    { t: 'Staff', d: 'The employee’s view.', role: 'staff', view: 'staff-notices', nav: 'My Notices' },
+    { t: 'Staff · My Notices', d: 'The employee receives the charge and gives their response within 5 working days. This response is part of the decision-making process — considered before management decides. It is not an appeal.', role: 'staff', view: 'staff-notices', nav: 'My Notices' },
+
+    // EXECUTIVE
+    { t: 'Executive Member', d: 'Oversight of a portfolio of departments — read-only. Pick which executive from the selector at the top.', role: 'exec', view: 'exec-portfolio', nav: 'My Portfolio' },
+    { t: 'Exec · My Portfolio', d: 'The staff in your portfolio, grouped by department, with open-case counts.', role: 'exec', view: 'exec-portfolio', nav: 'My Portfolio' },
+    { t: 'Exec · Portfolio Appraisals', d: 'The appraisal status of your portfolio staff by quarter (Pending / Submitted / With HR / CEO Approved).', role: 'exec', view: 'exec-appraisals', nav: 'Portfolio Appraisals' },
+    { t: 'Exec · Portfolio Counselling', d: 'Informal counselling records for your portfolio staff.', role: 'exec', view: 'exec-counsel', nav: 'Portfolio Counselling' },
+    { t: 'Exec · Portfolio Discipline', d: 'Every disciplinary case for your portfolio staff, filterable by status.', role: 'exec', view: 'exec-discipline', nav: 'Portfolio Discipline' },
+
+    // SMT
+    { t: 'SMT (Senior Management Team)', d: 'Reviews cases HR forwards and recommends to the CEO.', role: 'smt', view: 'smt-queue', nav: 'SMT Referrals' },
+    { t: 'SMT · SMT Referrals', d: 'Cases HR forwarded to you, showing HR’s recommendation and all offences. “View full case history” shows everything; then recommend an action + rationale to the CEO (both mandatory).', role: 'smt', view: 'smt-queue', nav: 'SMT Referrals' },
+    { t: 'SMT · Recommended', d: 'Cases the SMT has already recommended on, with the CEO’s final decision once made.', role: 'smt', view: 'smt-decided', nav: 'Recommended' },
+
+    // CEO
+    { t: 'CEO', d: 'The final decision-maker.', role: 'ceo', view: 'ceo-referrals', nav: 'Referrals' },
+    { t: 'CEO · Referrals', d: 'Cases forwarded by HR (directly) or via the SMT, showing both recommendations. “View full case history”, then “Make final decision” within range — which closes the case.', role: 'ceo', view: 'ceo-referrals', nav: 'Referrals' },
+    { t: 'CEO · Re-instatement', d: 'Re-establish a previously dismissed employee back into payroll — record a reason and effective date. Only the CEO can do this.', role: 'ceo', view: 'ceo-reinstate', nav: 'Re-instatement' },
+    { t: 'CEO · Reports & Audit', d: 'The CEO also has the Weekly Report, the Counselling Log and the full Audit Log for oversight.', role: 'ceo', view: 'report', nav: 'Weekly Report' },
+
+    // WRAP
+    { t: 'How it works & Help', d: 'Every role has a “How it works” walkthrough. You can also use the 💬 Help chatbox (bottom-right) to ask questions anytime.', role: 'lm', view: 'howto', nav: 'How it works' },
+    { t: 'That’s the whole system', d: 'Serious flow: LM raises → HR investigates (+jury) → forward → SMT recommends → CEO decides → Letter + PAF. Routine flow: LM raises → HR investigates → notice → Staff responds → HR decides. Every action is logged; hover any “i” for on-screen help.' },
   ];
 
   function startTour() { const s = TOUR[0]; setTour(1); if (s.role) switchRole(s.role); }
@@ -47,10 +84,11 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <>
       {tour > 0 && (
-        <div className="tour-wrap">
+        <div className={"tour-wrap" + (TOUR[tour - 1].nav ? " anchored" : "")}>
           <div className="tour-box">
+            {TOUR[tour - 1].nav && <div className="tour-pointer">◀ {TOUR[tour - 1].nav}</div>}
             <div className="tour-step">Step {tour} of {TOUR.length}</div>
             <h3 className="tour-title">{TOUR[tour - 1].t}</h3>
             <p className="tour-desc">{TOUR[tour - 1].d}</p>
@@ -77,7 +115,7 @@ export default function App() {
         </div>
         <nav className="nav">
           {nav.map(n => (
-            <button key={n.id} className={'nav-item' + (view === n.id ? ' active' : '')} onClick={() => setView(n.id)}>
+            <button key={n.id} className={'nav-item' + (view === n.id ? ' active' : '') + (tour > 0 && TOUR[tour - 1].nav === n.label ? ' tour-hl' : '')} onClick={() => setView(n.id)}>
               <span className="nav-ico">{n.icon}</span>{n.label}
             </button>
           ))}
@@ -139,7 +177,7 @@ export default function App() {
         {view === 'howto' && <HowItWorks />}
       </main>
     </div>
-    </div>
+    </>
   );
 }
 
@@ -2198,6 +2236,14 @@ function HelpChat() {
           <div className="chat-head"><b>Help</b><span className="sub" style={{ color: '#cbd5e1' }}>Ask about the app flow</span><button className="chat-x" onClick={() => setOpen(false)}>×</button></div>
           <div className="chat-body">
             {msgs.map((m, i) => <div key={i} className={'chat-msg ' + m.from}>{m.text}</div>)}
+            {msgs.length === 1 && (
+              <div className="chat-suggest">
+                <div className="chat-suggest-h">Try asking:</div>
+                {['How do I raise a case?','What is a Jury of Peers?','Can an employee appeal?','What happens after the employee responds?','Who makes the final decision?','How does forwarding to SMT work?','What is the PAF?','How is company property retrieved?','How do I re-instate an employee?','What do the penalty codes mean?','What are the seven roles?','What is the full process flow?'].map((s2, i) => (
+                  <button key={i} className="chat-chip" onClick={() => { const a = helpAnswer(s2); setMsgs(m => [...m, { from: 'you', text: s2 }, { from: 'bot', text: a }]); }}>{s2}</button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="chat-in">
             <input className="input" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder="Type your question…" />
