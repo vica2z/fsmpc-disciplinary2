@@ -6,8 +6,43 @@ export function workingDaysLeft(noticeStr,n){ var deadline=addWorkingDays(notice
 
 export function offByN(n,list){return (list||OFFENCES).find(function(o){return o.n===n;});}
 
+/* Active-window / clean-slate rules.
+   Written warning (R) = 3 months active; suspension/final warning (S#) = 6 months.
+   Admonishment (A) is informal — not counted. Dismissal (D) closes employment.
+   After the window with no new case, the warning expires and no longer counts. */
+export var TODAY = '2026-09-15';
+export function windowMonths(code){
+  if(!code) return 0;
+  if(code==='R') return 3;
+  if(code[0]==='S') return 6;
+  return 0; // A = informal, D = terminal
+}
+export function caseExpiry(c){
+  var action = c.decision || c.rec;
+  var m = windowMonths(action);
+  if(!m) return null;
+  var base = c.decisionDate || c.noticeDate || c.raised;
+  if(!base) return null;
+  var d = new Date(base); d.setMonth(d.getMonth()+m);
+  return d;
+}
+export function isExpired(c, today){
+  var exp = caseExpiry(c); if(!exp) return false;
+  return new Date(today||TODAY) > exp;
+}
+export function activeWarning(c, today){
+  // a closed warning that is still within its active window
+  if(c.status!=='Closed') return false;
+  var action = c.decision || c.rec;
+  if(windowMonths(action)===0) return false;
+  return !isExpired(c, today);
+}
+
 export function occurrenceFor(empId,offN,CASES){
-  var prior=CASES.filter(function(c){return c.empId===empId&&c.off===offN&&c.status==='Closed';}).length;
+  // count only prior closed cases whose warning is still active (not expired)
+  var prior=CASES.filter(function(c){
+    return c.empId===empId && c.off===offN && c.status==='Closed' && activeWarning(c);
+  }).length;
   return prior+1;
 }
 

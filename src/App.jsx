@@ -3,7 +3,7 @@ import { OFFENCES, CATS, CAT_ICON, EMP, EXECUTIVES, SMT_MEMBERS, APPRAISAL_STATU
 import {
   offByN, occurrenceFor, occLabel, rangeForOcc,
   penClass, penFull, optionsInRange, rangeChips, empById,
-  fmtDate, statusClass,
+  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths,
 } from './lib/logic';
 import { useStore } from './lib/store';
 
@@ -754,6 +754,9 @@ function LMRaise({ store, setView }) {
                 <span className="mono">{c.id}</span> · {offByN(c.off, offs)?.name}
                 <span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span>
                 <span className="sub">{c.outcome}</span>
+                {windowMonths(c.decision || c.rec) > 0 && (activeWarning(c)
+                  ? <span className="pill st-hr" title={'Active until ' + fmtDate(caseExpiry(c))}>Active window</span>
+                  : <span className="pill st-closed" title="Warning expired — clean slate">Expired ✓</span>)}
                 <TipBtn tip="View the full history of this past case." className="btn btn-sm btn-ghost" onClick={() => setHistory(c)}>View history</TipBtn>
               </div>
             ))}
@@ -1538,6 +1541,7 @@ function CaseHistoryModal({ store, c, onClose }) {
       <Sec n={c.jury?.active ? '9' : '8'} title="Employee response & decision">
         {c.response ? <><div className="hist-k">Employee response</div><div className="hist-quote">{c.response}</div></> : <div className="sub">No response recorded.</div>}
         {c.decision && <Row k="Final decision"><span className={'chip ' + penClass(c.decision)}>{c.decision}</span> {penFull(c.decision)}{c.outcome ? ` — ${c.outcome}` : ''}</Row>}
+        {windowMonths(c.decision || c.rec) > 0 && c.status === 'Closed' && <Row k="Active window">{activeWarning(c) ? <>Active until <b>{fmtDate(caseExpiry(c))}</b> ({windowMonths(c.decision || c.rec)} months) — counts toward occurrence</> : <>Expired — record wiped clean ({windowMonths(c.decision || c.rec)}-month window passed)</>}</Row>}
         {c.appeal && <><div className="hist-k">Appeal grounds</div><div className="hist-quote">{c.appeal}</div></>}
         <Row k="Current status"><span className={'pill ' + statusClass(c.status)}>{c.status}</span></Row>
       </Sec>

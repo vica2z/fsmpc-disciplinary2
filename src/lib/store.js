@@ -127,13 +127,13 @@ export function useStore() {
   }, [updateCase, log]);
 
   const ceoDecideReferral = useCallback((id, decision, outcome) => {
-    updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Decided by CEO' });
+    updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Decided by CEO', decisionDate: '2026-06-21' });
     log('ceo', id, 'CEO decision on referred case: ' + decision + (outcome ? ' (' + outcome + ')' : ''));
   }, [updateCase, log]);
 
   const issueNotice = useCallback((id, date) => { updateCase(id, { status: 'Awaiting Response', noticeDate: date || '2026-06-21' }); log('hr', id, 'Issued official notice — 5 working-day response window started'); }, [updateCase, log]);
   const recordResponse = useCallback((id, response) => { updateCase(id, { status: 'Awaiting Decision', response }); log('staff', id, 'Employee submitted response'); }, [updateCase, log]);
-  const recordDecision = useCallback((id, decision, outcome) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld' }); log('hr', id, 'Recorded decision: ' + decision); }, [updateCase, log]);
+  const recordDecision = useCallback((id, decision, outcome) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld', decisionDate: '2026-06-21' }); log('hr', id, 'Recorded decision: ' + decision); }, [updateCase, log]);
   const lodgeAppeal = useCallback((id, appeal, date) => { updateCase(id, { status: 'Under Appeal', appeal, appealDate: date || '2026-06-21' }); log('staff', id, 'Employee lodged an appeal'); }, [updateCase, log]);
   const ceoRuling = useCallback((id, decision, outcome) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld by CEO' }); log('ceo', id, 'CEO final ruling: ' + decision + ' (' + (outcome || 'Upheld by CEO') + ')'); }, [updateCase, log]);
 
