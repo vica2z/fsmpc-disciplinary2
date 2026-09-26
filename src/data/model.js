@@ -216,7 +216,7 @@ export const SEED_CASES=[
  /* Awaiting Response — notice issued, investigation done, letter available */
  {id:'DC-1051',empId:447,off:1,occ:2,rec:'R',status:'Awaiting Response',raised:'2026-06-15',
   desc:'Arrived more than 40 minutes late on three occasions in June without notifying the supervisor.',
-  noticeDate:'2026-06-16',
+  noticeDate:'2026-06-10',
   investigation:{findings:'Gate access logs confirm late entry on 3, 9 and 11 June (42, 55 and 47 minutes late). No prior notification was recorded on any occasion.',
    lmDiscuss:'Help Desk Team Leader confirmed the employee was counselled informally in May about punctuality.',
    staffDiscuss:'Employee cited transport difficulties and agreed the lateness was not notified in advance.',
@@ -224,7 +224,7 @@ export const SEED_CASES=[
    files:[], savedAt:'2026-06-16'}},
 
  /* With HR — investigated, ready to forward or notice */
- {id:'DC-1048',empId:446,off:8,occ:1,rec:'S10',status:'With HR',raised:'2026-06-12',
+ {id:'DC-1048',empId:446,fromCounselling:'CN-2004',off:8,occ:1,rec:'S10',status:'With HR',raised:'2026-06-12',
   desc:'Worked in the server room without the required anti-static and safety equipment despite reminders.',
   serious:true,
   investigation:{findings:'Employee entered the server room on 11 June without anti-static wrist strap or safety footwear. Two prior verbal reminders are on record.',
@@ -234,9 +234,9 @@ export const SEED_CASES=[
    files:[], savedAt:'2026-06-14'}},
 
  /* Closed — decision recorded */
- {id:'DC-1039',empId:440,off:16,occ:1,rec:'R',status:'Closed',raised:'2026-05-28',
+ {id:'DC-1039',empId:440,off:16,occ:1,rec:'R',status:'Closed',raised:'2026-02-02',
   desc:'Extensive personal use of company internet and email during working hours over several weeks.',
-  noticeDate:'2026-05-29', appealDate:'2026-06-10',
+  noticeDate:'2026-02-03', decisionDate:'2026-02-20', appealDate:'2026-06-10',
   investigation:{findings:'Network logs show an average of 2.5 hours per day on non-work streaming and social media over a four-week period.',
    lmDiscuss:'Line manager reported no drop in output but confirmed the usage policy was circulated in March.',
    staffDiscuss:'Employee stated much of the usage occurred during authorised breaks.',
@@ -467,7 +467,7 @@ export const PANEL_GUIDE = {
     role: 'lm',
     points: [
       'Shows the cases you have drafted or submitted. Counsel the employee first — a formal case is a last resort.',
-      'Drafts can be submitted to HR or deleted. Once submitted, the case moves to HR and you can track its status.',
+      'Drafts can be edited, submitted to HR or deleted. Once submitted, the case moves to HR and you can track its status.',
     ],
   },
   'lm-raise': {
@@ -487,6 +487,7 @@ export const PANEL_GUIDE = {
     role: 'hr',
     points: [
       'Cases needing HR action, in order: review & issue the official notice → record the employee response → record the decision.',
+      'Each case shows how many working days are left to respond. If the 5 days pass with no response, use “Proceed without response” to move to decision.',
       'Issuing the notice starts the 5 working-day response window. The final decision must stay within the offence range. For sufficiently serious conduct (theft, dishonesty, deliberate unsafe acts, serious safety breaches, violence or criminal conduct), management may proceed directly to termination without progressive steps, provided the employee was given an opportunity to respond where practicable.',
       'For serious cases, after investigation you can Forward to CEO (CEO decides) or Forward to SMT (SMT recommends, then CEO decides) — in both, the CEO takes the final decision and closes the case.',
       'The SMT has several members — when forwarding to SMT, pick which member should handle the case from the dropdown.',

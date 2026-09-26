@@ -87,6 +87,17 @@ export function useStore() {
     log('lm', newId, (asDraft ? 'Saved draft case' : 'Raised case') + ' with ' + offences.length + ' offence(s)' + (serious ? ' — flagged serious' : ''));
   }, [nextCaseId, log]);
 
+  const updateDraftMulti = useCallback((id, empId, offences, desc, date, asDraft, serious, lmFiles) => {
+    setCases(prev => {
+      const others = prev.filter(c => c.id !== id);
+      const list = offences.map(o => ({ off: +o.off, occ: occurrenceFor(+empId, +o.off, others), rec: o.rec }));
+      const f = list[0] || {};
+      return prev.map(c => c.id === id ? { ...c, empId: +empId, off: f.off, occ: f.occ, rec: f.rec, offences: list,
+        status: asDraft ? 'Draft' : 'With HR', raised: date || c.raised, desc: desc || '', serious: !!serious, lmFiles: lmFiles || [] } : c);
+    });
+    log('lm', id, asDraft ? 'Updated draft case' : 'Edited draft and submitted to HR');
+  }, [log]);
+
   const updateCase = useCallback((id, patch) =>
     setCases(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c)), []);
 
@@ -121,19 +132,19 @@ export function useStore() {
     log('hr', id, 'Forwarded case to SMT' + (smtMember ? ' member ' + smtMember : '') + ' for recommendation' + (hrRec ? ' — HR recommends ' + hrRec : ''));
   }, [updateCase, log]);
 
-  const smtRecommend = useCallback((id, action, rationale) => {
-    updateCase(id, { status: 'With CEO', smtRec: action, smtRationale: rationale || '' });
+  const smtRecommend = useCallback((id, action, rationale, offences) => {
+    updateCase(id, { status: 'With CEO', smtRec: action, smtRationale: rationale || '', ...(offences ? { offences } : {}) });
     log('smt', id, 'SMT recommended ' + action + ' to the CEO');
   }, [updateCase, log]);
 
-  const ceoDecideReferral = useCallback((id, decision, outcome) => {
-    updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Decided by CEO', decisionDate: '2026-06-21' });
+  const ceoDecideReferral = useCallback((id, decision, outcome, offences) => {
+    updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Decided by CEO', decisionDate: '2026-06-21', ...(offences ? { offences } : {}) });
     log('ceo', id, 'CEO decision on referred case: ' + decision + (outcome ? ' (' + outcome + ')' : ''));
   }, [updateCase, log]);
 
   const issueNotice = useCallback((id, date) => { updateCase(id, { status: 'Awaiting Response', noticeDate: date || '2026-06-21' }); log('hr', id, 'Issued official notice — 5 working-day response window started'); }, [updateCase, log]);
-  const recordResponse = useCallback((id, response) => { updateCase(id, { status: 'Awaiting Decision', response }); log('staff', id, 'Employee submitted response'); }, [updateCase, log]);
-  const recordDecision = useCallback((id, decision, outcome) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld', decisionDate: '2026-06-21' }); log('hr', id, 'Recorded decision: ' + decision); }, [updateCase, log]);
+  const recordResponse = useCallback((id, response, noResponse) => { updateCase(id, { status: 'Awaiting Decision', response, noResponse: !!noResponse }); log(noResponse ? 'hr' : 'staff', id, noResponse ? 'No response received within 5 working days — HR proceeded to decision' : 'Employee submitted response'); }, [updateCase, log]);
+  const recordDecision = useCallback((id, decision, outcome, offences) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld', decisionDate: '2026-06-21', ...(offences ? { offences } : {}) }); log('hr', id, 'Recorded decision: ' + decision); }, [updateCase, log]);
   const lodgeAppeal = useCallback((id, appeal, date) => { updateCase(id, { status: 'Under Appeal', appeal, appealDate: date || '2026-06-21' }); log('staff', id, 'Employee lodged an appeal'); }, [updateCase, log]);
   const ceoRuling = useCallback((id, decision, outcome) => { updateCase(id, { status: 'Closed', decision, outcome: outcome || 'Upheld by CEO' }); log('ceo', id, 'CEO final ruling: ' + decision + ' (' + (outcome || 'Upheld by CEO') + ')'); }, [updateCase, log]);
 
@@ -246,7 +257,7 @@ export function useStore() {
 
   return {
     cases, emps, offs, cats, logs, couns,
-    submitCase, submitCaseMulti, updateCase, deleteCase,
+    submitCase, submitCaseMulti, updateDraftMulti, updateCase, deleteCase,
     issueNotice, recordResponse, recordDecision, lodgeAppeal, ceoRuling, submitToHR, saveInvestigation, saveJury, saveProperty,
     forwardToCEO, forwardToSMT, smtRecommend, ceoDecideReferral, reinstateEmployee,
     addCounselling, updateCounselling, deleteCounselling, escalateCounselling, escalateCounsellingMulti,

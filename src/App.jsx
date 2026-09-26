@@ -3,7 +3,7 @@ import { OFFENCES, CATS, CAT_ICON, EMP, EXECUTIVES, SMT_MEMBERS, APPRAISAL_STATU
 import {
   offByN, occurrenceFor, occLabel, rangeForOcc,
   penClass, penFull, optionsInRange, rangeChips, empById,
-  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths,
+  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths, offList, worstCode, responseDue,
 } from './lib/logic';
 import { useStore } from './lib/store';
 
@@ -14,7 +14,8 @@ export default function App() {
   const nav = ROLE_NAV[role];
   const [view, setView] = useState(nav[0].id);
   const [tour, setTour] = useState(0);   // 0 = off, else step number (1-based)
-  const [spot, setSpot] = useState(null); // {top,left,width,height} of highlighted button
+  const [spot, setSpot] = useState(null);
+  const [draftId, setDraftId] = useState(null); // {top,left,width,height} of highlighted button
 
   function switchRole(r) { setRole(r); setView(ROLE_NAV[r][0].id); }
 
@@ -47,6 +48,7 @@ export default function App() {
     { t: 'Button · Jury of Peers', d: 'On an investigated serious case, this convenes the impartial peer panel and records its finding and recommendation.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"jury\"]' },
     { t: 'Button · Forward to CEO', d: 'Sends the case directly to the CEO for a final decision (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-ceo\"]' },
     { t: 'Button · Forward to SMT', d: 'Sends the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-smt\"]' },
+    { t: 'Button · Issue notice', d: 'After the investigation, HR issues the official notice. The employee sees it in My Notices and has 5 working days to respond (their response is considered before the decision).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"issue-notice\"]' },
     { t: 'Button · Letter', d: 'Generates the formatted disciplinary notice for the case — auto-filled and printable.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"letter\"]' },
     { t: 'HR · Investigation', d: 'Before any notice, HR investigates: findings, discussion with the line manager and employee, witnesses (name + statement), and uploaded document/image evidence. Only after saving can a notice be issued.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'HR · Jury of Peers', d: 'For a serious case, HR can convene an impartial peer panel: members, a finding (substantiated / partly / not), and a recommended action. It’s advisory and travels with the case.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
@@ -172,7 +174,7 @@ export default function App() {
         </div>
         <nav className="nav">
           {nav.map(n => (
-            <button key={n.id} className={'nav-item' + (view === n.id ? ' active' : '') + (tour > 0 && TOUR[tour - 1].nav === n.label ? ' tour-hl' : '')} onClick={() => setView(n.id)}>
+            <button key={n.id} className={'nav-item' + (view === n.id ? ' active' : '') + (tour > 0 && TOUR[tour - 1].nav === n.label ? ' tour-hl' : '')} onClick={() => { setDraftId(null); setView(n.id); }}>
               <span className="nav-ico">{n.icon}</span>{n.label}
             </button>
           ))}
@@ -209,8 +211,8 @@ export default function App() {
         {view === 'employees' && <Employees store={store} />}
         {view === 'audit' && <AuditLog store={store} />}
         {/* Line Manager */}
-        {view === 'lm-queue' && <LMQueue store={store} setView={setView} />}
-        {view === 'lm-raise' && <LMRaise store={store} setView={setView} />}
+        {view === 'lm-queue' && <LMQueue store={store} setView={setView} setDraftId={setDraftId} />}
+        {view === 'lm-raise' && <LMRaise key={draftId || 'new'} store={store} setView={setView} draftId={draftId} setDraftId={setDraftId} />}
         {view === 'lm-counsel' && <LMCounselling store={store} />}
         {view === 'counsel-log' && <CounsellingLog store={store} />}
         {view === 'exec-counsel' && <ExecCounselling store={store} execId={execId} />}
@@ -315,7 +317,7 @@ function AuditLog({ store }) {
 }
 
 /* ═══════════ LINE MANAGER ═══════════ */
-function LMQueue({ store, setView }) {
+function LMQueue({ store, setView, setDraftId }) {
   const { cases, emps, offs } = store;
   const mine = cases.filter(c => c.status === 'Draft' || c.status === 'With HR');
   const dismissals = cases.filter(c => c.status === 'Closed' && (c.decision || c.rec) === 'D');
@@ -337,10 +339,11 @@ function LMQueue({ store, setView }) {
                   <tr key={c.id}>
                     <td className="mono">{c.id}</td>
                     <td><b>{e?.name}</b><div className="sub">{e?.title}</div></td>
-                    <td>{o?.name}</td>
+                    <td><OffenceCell c={c} offs={offs} /></td>
                     <td><span className={'chip ' + penClass(c.rec)}>{c.rec}</span> {penFull(c.rec)}</td>
                     <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.serious && <div style={{ marginTop: 4 }}><span className="pill st-serious">⚠ Serious</span></div>}</td>
                     <td className="row-actions">
+                      {c.status === 'Draft' && <TipBtn tip="Open this draft to change the employee, offences, statement or evidence." className="btn btn-sm btn-ghost" dt="edit-draft" onClick={() => { setDraftId(c.id); setView('lm-raise'); }}>Edit</TipBtn>}
                       {c.status === 'Draft' && <TipBtn tip="Send this draft case to HR for review." className="btn btn-sm btn-navy" onClick={() => store.submitToHR(c.id)}>Submit to HR</TipBtn>}
                       {c.status === 'Draft' && <TipBtn tip="Permanently delete this draft case. This cannot be undone." className="btn btn-sm btn-danger" onClick={() => { if (confirm('Delete draft ' + c.id + '?')) store.deleteCase(c.id); }}>Delete</TipBtn>}
                       {!c.serious && <TipBtn tip="Mark this case as a serious offence — HR is alerted immediately while the investigation continues." className="btn btn-sm btn-ghost" onClick={() => store.flagSerious(c.id, true)}>Flag serious</TipBtn>}
@@ -652,14 +655,16 @@ function ExecCounselling({ store, execId }) {
   );
 }
 
-function LMRaise({ store, setView }) {
-  const { cases, emps, offs } = store;
-  const [empId, setEmpId] = useState('');
-  const [rows, setRows] = useState([{ off: '', rec: '' }]);   // multiple offences
-  const [desc, setDesc] = useState('');
-  const [date, setDate] = useState('2026-06-21');
-  const [serious, setSerious] = useState(false);
-  const [files, setFiles] = useState([]);
+function LMRaise({ store, setView, draftId, setDraftId }) {
+  const { emps, offs } = store;
+  const draft = draftId ? store.cases.find(x => x.id === draftId) : null;
+  const cases = draft ? store.cases.filter(x => x.id !== draftId) : store.cases;
+  const [empId, setEmpId] = useState(draft ? String(draft.empId) : '');
+  const [rows, setRows] = useState(draft ? offList(draft).map(x => ({ off: String(x.off), rec: x.rec || '' })) : [{ off: '', rec: '' }]);   // multiple offences
+  const [desc, setDesc] = useState(draft?.desc || '');
+  const [date, setDate] = useState(draft?.raised || '2026-06-21');
+  const [serious, setSerious] = useState(!!draft?.serious);
+  const [files, setFiles] = useState(draft?.lmFiles || []);
   const [history, setHistory] = useState(null);
 
   function onFiles(ev) {
@@ -712,14 +717,15 @@ function LMRaise({ store, setView }) {
       const info = rowInfo(r.off, chosen.slice(0, i).filter(x => x.off === r.off).length);
       return { off: r.off, rec: r.rec || (info ? info.opts[0] : '') };
     });
-    store.submitCaseMulti(+empId, payload, desc, date, asDraft, serious, files);
+    if (draft) { store.updateDraftMulti(draft.id, +empId, payload, desc, date, asDraft, serious, files); setDraftId && setDraftId(null); }
+    else store.submitCaseMulti(+empId, payload, desc, date, asDraft, serious, files);
     setEmpId(''); setRows([{ off: '', rec: '' }]); setDesc(''); setSerious(false); setFiles([]);
     setView('lm-queue');
   }
 
   return (
     <div className="page">
-      <PageHead title="Raise a Disciplinary Case" info="Start a formal case. Add one or more offences — each is checked for its own occurrence and penalty range." sub="Counsel first — raise a formal case only if the problem continues" />
+      <PageHead title={draft ? `Edit draft ${draft.id}` : "Raise a Disciplinary Case"} info="Start a formal case. Add one or more offences — each is checked for its own occurrence and penalty range." sub="Counsel first — raise a formal case only if the problem continues" />
       <GuideBanner view="lm-raise" />
       <Card>
         <Field label={<>Employee <InfoTip text="A red circle next to an employee’s name means they already have one or more open disciplinary cases." /></>}>
@@ -908,12 +914,15 @@ function HRQueue({ store }) {
                     <td><OffenceCell c={c} offs={offs} /></td>
                     <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}</td>
                     <td dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} />
-                    <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span></td>
+                    <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span><DueTag c={c} /></td>
                     <td className="row-actions">
+                      {c.status === 'Awaiting Response' && c.noticeDate && responseDue(c.noticeDate) < 0 &&
+                        <TipBtn tip="The 5 working-day window has passed with no response. Move the case to decision and record that no response was received." className="btn btn-sm btn-ghost" dt="no-response" onClick={() => setActing({ c, action: { label: 'Proceed without response', to: 'Awaiting Decision', noResponse: true } })}>Proceed without response</TipBtn>}
                       {c.status === 'With HR' && !c.investigation &&
                         <TipBtn tip="Open the investigation: record findings, discussions, witnesses and evidence before any notice is issued." className="btn btn-sm btn-navy" onClick={() => setInvestigating(c)}>Investigate</TipBtn>}
                       {c.status === 'With HR' && c.investigation && <>
                         <TipBtn tip="Re-open the saved investigation to review or edit findings, witnesses and evidence." className="btn btn-sm btn-ghost" onClick={() => setInvestigating(c)}>Investigation</TipBtn>
+                        <TipBtn tip="Issue the official notice to the employee. It appears in their My Notices and starts the 5 working-day response window." className="btn btn-sm btn-navy" dt="issue-notice" onClick={() => setActing({ c, action: { label: 'Issue notice', to: 'Awaiting Response' } })}>Issue notice</TipBtn>
                         <TipBtn tip="Activate an impartial peer panel to give an independent finding and recommendation on a serious case." dt="jury" className="btn btn-sm btn-ghost" onClick={() => setJuring(c)}>{c.jury?.active ? 'Jury ✓' : 'Jury of Peers'}</TipBtn>
                         <TipBtn tip="Send the case straight to the CEO for a final decision (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-ceo" onClick={() => setForwarding({ c, to: 'CEO' })}>Forward to CEO</TipBtn>
                         <TipBtn tip="Send the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-smt" onClick={() => setForwarding({ c, to: 'SMT' })}>Forward to SMT</TipBtn>
@@ -979,12 +988,15 @@ function LetterModal({ store, c, onClose }) {
         <div className="row"><span className="lbl">Department:</span> {e?.dept}</div>
         <div className="row"><span className="lbl">Supervisor:</span> {e?.sup}</div>
 
-        <h2>The charge</h2>
-        <div className="row"><span className="lbl">Offence:</span> {o?.name}</div>
-        <div className="row"><span className="lbl">Category:</span> {o?.cat}</div>
-        <div className="row"><span className="lbl">Occurrence:</span> {occLabel(c.occ)}</div>
+        <h2>The charge{offList(c).length > 1 ? 's' : ''}</h2>
+        {offList(c).map((x, i) => { const oo = offByN(+x.off, offs); return (
+          <div key={i} style={{ marginBottom: 6 }}>
+            <div className="row"><span className="lbl">{offList(c).length > 1 ? `Offence ${i + 1}:` : 'Offence:'}</span> {oo?.name}</div>
+            <div className="row"><span className="lbl">Category / occurrence:</span> {oo?.cat} — {occLabel(x.occ)}</div>
+            {oo?.note && <div className="row"><span className="lbl">Note:</span> {oo.note}</div>}
+          </div>
+        ); })}
         {c.desc && <div className="row"><span className="lbl">Details:</span> {c.desc}</div>}
-        {o?.note && <div className="row"><span className="lbl">Note:</span> {o.note}</div>}
 
         {c.investigation?.findings && <>
           <h2>Investigation</h2>
@@ -993,7 +1005,11 @@ function LetterModal({ store, c, onClose }) {
         </>}
 
         <h2>{decided ? 'Decision' : 'Proposed action'}</h2>
-        <div className="row"><span className="lbl">Action:</span> {penFull(action)}</div>
+        {offList(c).length > 1
+          ? offList(c).map((x, i) => { const code = decided ? (x.decision || action) : x.rec; return (
+              <div key={i} className="row"><span className="lbl">{`Offence ${i + 1}:`}</span> {penFull(code)}</div>); })
+          : <div className="row"><span className="lbl">Action:</span> {penFull(action)}</div>}
+        {offList(c).length > 1 && decided && <div className="row"><span className="lbl">Overall outcome:</span> {penFull(action)}</div>}
         {c.smtRec && <div className="row"><span className="lbl">SMT recommendation:</span> {penFull(c.smtRec)}</div>}
         {c.outcome && <div className="row"><span className="lbl">Outcome:</span> {c.outcome}</div>}
 
@@ -1069,9 +1085,8 @@ function PAFModal({ store, c, onClose }) {
         <h2>Disciplinary action</h2>
         <table className="paf-table"><tbody>
           <Row k="Case reference" v={c.id} />
-          <Row k="Offence" v={o?.name} />
-          <Row k="Occurrence" v={occLabel(c.occ)} />
-          <Row k="Decision" v={penFull(action)} />
+          {offList(c).map((x, i) => <Row key={i} k={offList(c).length > 1 ? `Offence ${i + 1}` : 'Offence'} v={`${offByN(+x.off, offs)?.name || ''} — ${occLabel(x.occ)} — ${penFull(x.decision || action)}`} />)}
+          <Row k={offList(c).length > 1 ? 'Overall decision' : 'Decision'} v={penFull(action)} />
           <Row k="Action type" v={actionType} />
           {isSuspension && <Row k="Suspension length" v={`${susDays} working day(s)`} />}
           <Row k="Effective date" v={today} />
@@ -1400,15 +1415,17 @@ function StaffNotices({ store }) {
   const [acting, setActing] = useState(null);
   return (
     <div className="page">
-      <PageHead title="My Notices" info="Official notices addressed to you. Respond within 5 working days; appeal within 10." sub="Disciplinary notices addressed to employees — respond or appeal here" />
+      <PageHead title="My Notices" info="Official notices addressed to you. Give your response within 5 working days — it is considered before the decision is made." sub="Disciplinary notices addressed to employees — give your response here" />
       <GuideBanner view="staff-notices" />
       {notices.length ? notices.map(c => {
         const e = empById(c.empId, emps), o = offByN(c.off, offs);
         return (
-          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={o?.name}>
+          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? `${offList(c).length} offences` : o?.name}>
             <div className="notice-body">
-              <div><span className="sub">Charge:</span> {o?.name} — {occLabel(c.occ)} occurrence</div>
-              <div><span className="sub">Proposed action:</span> <span className={'chip ' + penClass(c.rec)}>{c.rec}</span> {penFull(c.rec)}</div>
+              {offList(c).map((x, i) => { const oo = offByN(+x.off, offs); return (
+                <div key={i}><span className="sub">{offList(c).length > 1 ? `Charge ${i + 1}:` : 'Charge:'}</span> {oo?.name} — {occLabel(x.occ)} occurrence · <span className="sub">proposed</span> <span className={'chip ' + penClass(x.rec)}>{x.rec}</span> {penFull(x.rec)}</div>
+              ); })}
+              <DueTag c={c} />
               {c.response && <div className="notice-quote">Your response: “{c.response}”</div>}
               {c.status === 'Closed' && <div><span className="sub">Decision:</span> <span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span> — {c.outcome}</div>}
             </div>
@@ -1457,7 +1474,7 @@ function CaseHistoryModal({ store, c, onClose }) {
         {caseOffences(c).map((x, i) => { const oo = offByN(x.off, offs); const pr = oo ? rangeForOcc(oo, x.occ) : null; return (
           <div key={i} className="hist-off">
             <div className="hist-off-head">{caseOffences(c).length > 1 ? `Offence ${i + 1}: ` : ''}{oo?.n}. {oo?.name}</div>
-            <div className="sub">{oo?.cat} · {occLabel(x.occ)} occurrence · range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pr) }} />{x.rec ? <> · LM recommended <span className={'chip ' + penClass(x.rec)}>{x.rec}</span></> : null}</div>
+            <div className="sub">{oo?.cat} · {occLabel(x.occ)} occurrence · range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pr) }} />{x.rec ? <> · LM recommended <span className={'chip ' + penClass(x.rec)}>{x.rec}</span></> : null}{x.smtRec ? <> · SMT <span className={'chip ' + penClass(x.smtRec)}>{x.smtRec}</span></> : null}{x.decision ? <> · <b>Decision</b> <span className={'chip ' + penClass(x.decision)}>{x.decision}</span></> : null}</div>
             {oo?.note && <div className="penalty-note">⚠ {oo.note}</div>}
           </div>
         ); })}
@@ -1539,7 +1556,7 @@ function CaseHistoryModal({ store, c, onClose }) {
       </Sec>
 
       <Sec n={c.jury?.active ? '9' : '8'} title="Employee response & decision">
-        {c.response ? <><div className="hist-k">Employee response</div><div className="hist-quote">{c.response}</div></> : <div className="sub">No response recorded.</div>}
+        {c.noResponse ? <div className="penalty-note">No response received within 5 working days — HR proceeded to decision.</div> : c.response ? <><div className="hist-k">Employee response</div><div className="hist-quote">{c.response}</div></> : <div className="sub">No response recorded.</div>}
         {c.decision && <Row k="Final decision"><span className={'chip ' + penClass(c.decision)}>{c.decision}</span> {penFull(c.decision)}{c.outcome ? ` — ${c.outcome}` : ''}</Row>}
         {windowMonths(c.decision || c.rec) > 0 && c.status === 'Closed' && <Row k="Active window">{activeWarning(c) ? <>Active until <b>{fmtDate(caseExpiry(c))}</b> ({windowMonths(c.decision || c.rec)} months) — counts toward occurrence</> : <>Expired — record wiped clean ({windowMonths(c.decision || c.rec)}-month window passed)</>}</Row>}
         {c.appeal && <><div className="hist-k">Appeal grounds</div><div className="hist-quote">{c.appeal}</div></>}
@@ -1572,7 +1589,7 @@ function CEOReferrals({ store }) {
         const e = empById(c.empId, emps), o = offByN(c.off, offs);
         const pair = o ? rangeForOcc(o, c.occ) : null;
         return (
-          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={o?.name}>
+          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
               <div><span className="sub">Occurrence:</span> {occLabel(c.occ)} — range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
               <div><span className="sub">Route:</span> {c.smtRec ? `HR → SMT → CEO${c.smtMember ? ` (${c.smtMember})` : ''}` : 'HR → CEO (direct)'}</div>
@@ -1604,30 +1621,25 @@ function CEOReferrals({ store }) {
 
 function CEODecisionModal({ store, c, onClose }) {
   const { offs, emps } = store;
-  const o = offByN(c.off, offs), e = empById(c.empId, emps);
-  const pair = o ? rangeForOcc(o, c.occ) : null;
-  const opts = optionsInRange(pair);
-  const [decision, setDecision] = useState(c.smtRec || opts[0] || '');
+  const e = empById(c.empId, emps);
+  const list = offList(c);
+  const [vals, setVals] = useState(list.map(x => x.smtRec || (list.length === 1 ? c.smtRec : '') || x.rec || ''));
   const [note, setNote] = useState('');
   function go() {
-    if (!decision) { alert('Select the final action.'); return; }
-    store.ceoDecideReferral(c.id, decision, note || (c.smtRec === decision ? 'Followed SMT recommendation' : 'Decided by CEO'));
+    if (vals.some(v => !v)) { alert('Select the final action for every offence.'); return; }
+    const newOffs = list.map((x, i) => ({ ...x, decision: vals[i] }));
+    const followed = list.every((x, i) => (x.smtRec || c.smtRec) === vals[i]);
+    store.ceoDecideReferral(c.id, worstCode(vals), note || (c.smtRec && followed ? 'Followed SMT recommendation' : 'Decided by CEO'), newOffs);
     onClose();
   }
   return (
     <Modal title={`CEO decision — ${c.id}`} onClose={onClose}
       foot={<><button className="btn btn-ghost" onClick={onClose}>Cancel</button><TipBtn tip="Record the CEO\u2019s final action within the offence range. Closes the case." className="btn btn-navy" onClick={go}>Record final decision</TipBtn></>}>
-      <div className="penalty-box">
-        <div className="penalty-title">{e?.name} — {o?.name}</div>
-        <div className="penalty-range"><span className="sub">{occLabel(c.occ)} occurrence — range:</span> <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
-      </div>
+      <div className="penalty-title" style={{ marginBottom: 6 }}>{e?.name}</div>
+      <OffenceRanges c={c} offs={offs} />
       {c.hrRec && <div className="inv-recap"><div className="inv-title">HR recommended</div><div><span className={'chip ' + penClass(c.hrRec)}>{c.hrRec}</span> {penFull(c.hrRec)}</div>{c.hrNote && <div className="sub" style={{marginTop:4}}>{c.hrNote}</div>}</div>}
       {c.smtRec && <div className="smt-rec"><div className="inv-title">SMT recommended</div><div><span className={'chip ' + penClass(c.smtRec)}>{c.smtRec}</span> {penFull(c.smtRec)}</div>{c.smtRationale && <div className="sub" style={{marginTop:4}}>{c.smtRationale}</div>}</div>}
-      <Field label="Final action (within range)">
-        <select className="input" value={decision} onChange={ev => setDecision(ev.target.value)}>
-          {opts.map(x => <option key={x} value={x}>{x} — {penFull(x)}</option>)}
-        </select>
-      </Field>
+      <PerOffencePicker c={c} offs={offs} values={vals} setValues={setVals} label="Final action for each offence" hintKey="smtRec" />
       <Field label="Note (optional)"><textarea className="input" rows={2} value={note} onChange={ev => setNote(ev.target.value)} /></Field>
     </Modal>
   );
@@ -1646,7 +1658,7 @@ function CEOReinstate({ store }) {
       {dismissed.length ? dismissed.map(c => {
         const e = empById(c.empId, emps), o = offByN(c.off, offs);
         return (
-          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={o?.name}>
+          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
               <div><span className="sub">Dismissed for:</span> {o?.name} — {occLabel(c.occ)} occurrence</div>
               {c.outcome && <div className="sub">{c.outcome}</div>}
@@ -1858,7 +1870,7 @@ function SMTQueue({ store }) {
         const e = empById(c.empId, emps), o = offByN(c.off, offs);
         const pair = o ? rangeForOcc(o, c.occ) : null;
         return (
-          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={o?.name}>
+          <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
               <div><span className="sub">Occurrence:</span> {occLabel(c.occ)} — range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
               {c.smtMember && <div><span className="sub">Assigned to:</span> {c.smtMember}</div>}
@@ -1885,25 +1897,22 @@ function SMTQueue({ store }) {
 
 function SMTRecommendModal({ store, c, onClose }) {
   const { offs, emps } = store;
-  const o = offByN(c.off, offs), e = empById(c.empId, emps);
-  const pair = o ? rangeForOcc(o, c.occ) : null;
-  const opts = optionsInRange(pair);
-  const [action, setAction] = useState('');
+  const e = empById(c.empId, emps);
+  const list = offList(c);
+  const [vals, setVals] = useState(list.map(() => ''));
   const [rationale, setRationale] = useState('');
   function go() {
-    if (!action) { alert('Select a recommended action — a recommendation to the CEO is required.'); return; }
+    if (vals.some(v => !v)) { alert('Select a recommended action for every offence — a recommendation to the CEO is required.'); return; }
     if (!rationale.trim()) { alert('Enter the rationale for the SMT recommendation.'); return; }
-    store.smtRecommend(c.id, action, rationale);
+    const newOffs = list.map((x, i) => ({ ...x, smtRec: vals[i] }));
+    store.smtRecommend(c.id, worstCode(vals), rationale, newOffs);
     onClose();
   }
   return (
     <Modal title={`SMT recommendation — ${c.id}`} onClose={onClose}
       foot={<><button className="btn btn-ghost" onClick={onClose}>Cancel</button><TipBtn tip="Send the SMT\u2019s recommendation and rationale to the CEO." className="btn btn-navy" onClick={go}>Send recommendation to CEO</TipBtn></>}>
-      <div className="penalty-box">
-        <div className="penalty-title">{e?.name} — {o?.name}</div>
-        <div className="penalty-range"><span className="sub">{occLabel(c.occ)} occurrence — range:</span> <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
-        {o?.note && <div className="penalty-note">⚠ {o.note}</div>}
-      </div>
+      <div className="penalty-title" style={{ marginBottom: 6 }}>{e?.name}</div>
+      <OffenceRanges c={c} offs={offs} />
       {c.hrRec && (
         <div className="inv-recap">
           <div className="inv-title">HR recommended</div>
@@ -1911,12 +1920,7 @@ function SMTRecommendModal({ store, c, onClose }) {
           {c.hrNote && <div className="sub" style={{ marginTop: 4 }}>{c.hrNote}</div>}
         </div>
       )}
-      <Field label="Recommended action to the CEO (required)">
-        <select className="input" value={action} onChange={ev => setAction(ev.target.value)}>
-          <option value="">— Select recommended action —</option>
-          {opts.map(x => <option key={x} value={x}>{x} — {penFull(x)}</option>)}
-        </select>
-      </Field>
+      <PerOffencePicker c={c} offs={offs} values={vals} setValues={setVals} label="Recommended action for each offence (required)" required />
       <Field label="Rationale (required)"><textarea className="input" rows={3} value={rationale} onChange={ev => setRationale(ev.target.value)} placeholder="Why the SMT recommends this action…" /></Field>
       <p className="hint">A recommendation and rationale are required. This is advisory only — the CEO makes the final decision.</p>
     </Modal>
@@ -1941,7 +1945,7 @@ function SMTDecided({ store }) {
                   <tr key={c.id}>
                     <td className="mono">{c.id}</td>
                     <td><b>{e?.name}</b></td>
-                    <td>{o?.name}</td>
+                    <td><OffenceCell c={c} offs={offs} /></td>
                     <td><span className={'chip ' + penClass(c.smtRec)}>{c.smtRec}</span> {penFull(c.smtRec)}</td>
                     <td>{c.status === 'Closed' ? <><span className={'chip ' + penClass(c.decision)}>{c.decision}</span> {c.outcome}</> : <span className="sub">Awaiting CEO</span>}</td>
                     <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span></td>
@@ -1957,22 +1961,66 @@ function SMTDecided({ store }) {
 }
 
 /* ═══════════ SHARED ACTION MODAL ═══════════ */
+/* Shows every offence on a case with its own occurrence + penalty range */
+function OffenceRanges({ c, offs }) {
+  const list = offList(c);
+  return (
+    <div className="penalty-box">
+      {list.map((x, i) => { const oo = offByN(+x.off, offs); const pr = oo ? rangeForOcc(oo, x.occ) : null; return (
+        <div key={i} style={{ marginBottom: i < list.length - 1 ? 8 : 0 }}>
+          <div className="penalty-range"><span className="sub">{list.length > 1 ? `Offence ${i + 1}: ` : ''}{oo?.name} — {occLabel(x.occ)} occurrence — range:</span> <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pr) }} /></div>
+          {oo?.note && <div className="penalty-note">⚠ {oo.note}</div>}
+        </div>
+      ); })}
+    </div>
+  );
+}
+/* One action picker per offence, each limited to that offence's range */
+function PerOffencePicker({ c, offs, values, setValues, label, hintKey, required }) {
+  const list = offList(c);
+  return (
+    <div className="inv-section">
+      <div className="inv-title">{label} <InfoTip text="Each offence is decided on its own, within its own penalty range. The overall outcome is the most serious of them." /></div>
+      {list.map((x, i) => { const oo = offByN(+x.off, offs); const pr = oo ? rangeForOcc(oo, x.occ) : null; const opts = optionsInRange(pr);
+        const hint = hintKey && (x[hintKey] || (hintKey === 'smtRec' ? c.smtRec : null));
+        return (
+          <Field key={i} label={`${list.length > 1 ? (i + 1) + '. ' : ''}${oo?.name || ''} (${occLabel(x.occ)})`}>
+            <select className="input" value={values[i] || ''} onChange={ev => { const v = [...values]; v[i] = ev.target.value; setValues(v); }}>
+              {required && <option value="">— Select action —</option>}
+              {opts.map(o2 => <option key={o2} value={o2}>{o2} — {penFull(o2)}</option>)}
+            </select>
+            {hint && <span className="sub">Recommended: {hint} — {penFull(hint)}</span>}
+          </Field>
+        ); })}
+      {list.length > 1 && values.every(Boolean) && <div className="sub">Overall outcome: <b>{worstCode(values)} — {penFull(worstCode(values))}</b></div>}
+    </div>
+  );
+}
+function DueTag({ c }) {
+  if (c.status !== 'Awaiting Response' || !c.noticeDate) return null;
+  const d = responseDue(c.noticeDate);
+  if (d === null) return null;
+  return d >= 0
+    ? <div className="sub" style={{ marginTop: 4 }}>⏳ {d} working day{d === 1 ? '' : 's'} left to respond</div>
+    : <div className="sub" style={{ marginTop: 4, color: '#B42318', fontWeight: 700 }}>⚠ Response overdue by {-d} working day{d === -1 ? '' : 's'}</div>;
+}
+
 function ActionModal({ store, c, action, onClose }) {
   const { offs } = store;
-  const o = offByN(c.off, offs);
-  const pair = o ? rangeForOcc(o, c.occ) : null;
-  const opts = optionsInRange(pair);
-  const [decision, setDecision] = useState(c.decision || c.rec);
-  const [text, setText] = useState('');
+  const [vals, setVals] = useState(offList(c).map(x => x.decision || x.smtRec || x.rec || ''));
+  const [text, setText] = useState(action.noResponse ? 'No response received within 5 working days.' : '');
   const [date, setDate] = useState('2026-06-21');
 
   function go() {
     switch (action.to) {
       case 'Awaiting Response': store.issueNotice(c.id, date); break;
-      case 'Awaiting Decision': store.recordResponse(c.id, text); break;
-      case 'Closed':
-        store.recordDecision(c.id, decision, text || 'Upheld');
+      case 'Awaiting Decision': store.recordResponse(c.id, text, !!action.noResponse); break;
+      case 'Closed': {
+        if (vals.some(v => !v)) { alert('Select a final action for every offence.'); return; }
+        const newOffs = offList(c).map((x, i) => ({ ...x, decision: vals[i] }));
+        store.recordDecision(c.id, worstCode(vals), text || 'Upheld', newOffs);
         break;
+      }
       default: break;
     }
     onClose();
@@ -1980,15 +2028,15 @@ function ActionModal({ store, c, action, onClose }) {
   const needsDecision = action.to === 'Closed';
   const needsText = ['Awaiting Decision', 'Closed'].includes(action.to);
   const needsDate = ['Awaiting Response'].includes(action.to);
-  const textLabel = action.to === 'Awaiting Decision' ? 'Your response'
+  const textLabel = action.noResponse ? 'Note for the record' : action.to === 'Awaiting Decision' ? 'Your response'
     : 'Outcome note (optional)';
   return (
     <Modal title={`${action.label} — ${c.id}`} onClose={onClose}
       foot={<><button className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-navy" onClick={go}>{action.label}</button></>}>
-      <div className="penalty-box">
-        <div className="penalty-range"><span className="sub">{occLabel(c.occ)} occurrence — range:</span> <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
-        {o?.note && <div className="penalty-note">⚠ {o.note}</div>}
-      </div>
+      <OffenceRanges c={c} offs={offs} />
+      {c.status === 'Awaiting Decision' && (c.noResponse
+        ? <div className="penalty-note">No response was received within 5 working days.</div>
+        : c.response && <div className="notice-quote">Employee response: “{c.response}”</div>)}
       {c.investigation && (
         <div className="inv-recap">
           <div className="inv-title">Investigation on file</div>
@@ -2005,13 +2053,7 @@ function ActionModal({ store, c, action, onClose }) {
           {c.jury.members?.length > 0 && <div className="sub">Panel: {c.jury.members.map(m=>m.name).join(', ')}</div>}
         </div>
       )}
-      {needsDecision && (
-        <Field label="Final action (within range)">
-          <select className="input" value={decision} onChange={e => setDecision(e.target.value)}>
-            {opts.map(x => <option key={x} value={x}>{x} — {penFull(x)}</option>)}
-          </select>
-        </Field>
-      )}
+      {needsDecision && <PerOffencePicker c={c} offs={offs} values={vals} setValues={setVals} label="Final action for each offence" />}
       {needsDate && <Field label={'Notice date'}><input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} /></Field>}
       {needsText && <Field label={textLabel}><textarea className="input" rows={3} value={text} onChange={e => setText(e.target.value)} /></Field>}
       {action.to === 'Awaiting Response' && <p className="hint">Issuing the notice starts the 5 working-day response window.</p>}
@@ -2059,7 +2101,7 @@ function Charges({ store, role }) {
                 {[0, 1, 2].map(i => { const pair = o.p[i] || o.p[o.p.length - 1]; return <td key={i} dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} />; })}
                 {editable && <td className="row-actions">
                   <TipBtn tip="Edit this record." className="btn btn-sm btn-ghost" onClick={() => setEditing(o)}>Edit</TipBtn>
-                  <button className="btn btn-sm btn-danger" onClick={() => { if (confirm(`Delete offence #${o.n}?`)) store.deleteOff(o.n); }}>Delete</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => { const used = store.cases.filter(cc => offList(cc).some(x => +x.off === +o.n)).length; if (used) { alert(`Offence #${o.n} is used in ${used} case(s) and cannot be deleted. Edit it instead.`); return; } if (confirm(`Delete offence #${o.n}?`)) store.deleteOff(o.n); }}>Delete</button>
                 </td>}
               </tr>
             ))}
@@ -2180,7 +2222,7 @@ function Report({ store }) {
     <table className="table">
       <thead><tr><th>Case</th><th>Employee</th><th>Offence</th><th>Action</th><th>Status</th></tr></thead>
       <tbody>{list.map(c => { const e = empById(c.empId, emps), o = offByN(c.off, offs); return (
-        <tr key={c.id}><td className="mono">{c.id}</td><td>{e?.name}</td><td>{o?.name}</td>
+        <tr key={c.id}><td className="mono">{c.id}</td><td>{e?.name}</td><td><OffenceCell c={c} offs={offs} /></td>
           <td><span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span></td>
           <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.outcome && <div className="sub">{c.outcome}</div>}</td></tr>
       ); })}</tbody>
@@ -2257,6 +2299,9 @@ const HELP_KB = [
   { k: ['jury','peers','panel'], a: 'For a serious case, HR can convene a Jury of Peers — an impartial panel that gives an independent finding and recommendation. It’s advisory; HR, SMT and the CEO still decide.' },
   { k: ['notice','letter'], a: 'After investigation, HR issues the official notice and can generate a formatted disciplinary Letter (auto-filled, printable) from All Cases.' },
   { k: ['respond','response','reply','5 day'], a: 'The employee responds within 5 working days (Staff → My Notices). This response is part of the decision-making process — considered before management decides. It is not an appeal.' },
+  { k: ['no response','overdue','deadline','late response','days left'], a: 'Each notice shows how many working days are left to respond. If 5 working days pass with no response, HR can click “Proceed without response” in the HR Queue — the case moves to decision and the record notes that no response was received.' },
+  { k: ['each offence','multiple offence decision','per offence'], a: 'When a case has more than one offence, each offence is decided on its own within its own penalty range (HR, SMT and CEO all pick an action per offence). The overall outcome — used for the PAF and payroll — is the most serious of them.' },
+  { k: ['edit draft','draft'], a: 'Drafts can be edited: Line Manager → My Team → Edit on the draft. Change the employee, offences, statement or evidence, then save or submit to HR.' },
   { k: ['appeal'], a: 'There is no separate appeal process. The employee’s response is their opportunity to give their account before the decision is made — not an appeal after the fact.' },
   { k: ['forward','smt','recommend'], a: 'For serious cases HR can forward to the CEO directly, or to the SMT. HR must give a recommendation. On the SMT route, the chosen SMT member also gives a mandatory recommendation. The CEO makes the final decision.' },
   { k: ['ceo','final decision','decide'], a: 'The CEO is the final decision-maker on forwarded cases (sees HR and SMT recommendations). The CEO can also re-establish a previously terminated employee to payroll.' },

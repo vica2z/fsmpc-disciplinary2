@@ -2,7 +2,9 @@ import { OFFENCES, PEN_ORDER, EMP } from '../data/model';
 
 export function addWorkingDays(dateStr,n){ var d=new Date(dateStr); var added=0; while(added<n){ d.setDate(d.getDate()+1); var wd=d.getDay(); if(wd!==0&&wd!==6)added++; } return d; }
 
-export function workingDaysLeft(noticeStr,n){ var deadline=addWorkingDays(noticeStr,n); var today=new Date('2026-06-21'); var ms=deadline-today; return Math.ceil(ms/86400000); }
+export function workingDaysLeft(noticeStr,n){ var deadline=addWorkingDays(noticeStr,n); var today=new Date(TODAY); var ms=deadline-today; return Math.ceil(ms/86400000); }
+/* working days remaining (negative = overdue) for a notice */
+export function responseDue(noticeStr){ if(!noticeStr) return null; var d=new Date(noticeStr), t=new Date(TODAY), left=0; var dl=addWorkingDays(noticeStr,5); if(t<=dl){ var x=new Date(t); while(x<dl){ x.setDate(x.getDate()+1); var w=x.getDay(); if(w!==0&&w!==6) left++; } return left; } var o=0, y=new Date(dl); while(y<t){ y.setDate(y.getDate()+1); var w2=y.getDay(); if(w2!==0&&w2!==6) o++; } return -o; }
 
 export function offByN(n,list){return (list||OFFENCES).find(function(o){return o.n===n;});}
 
@@ -10,7 +12,7 @@ export function offByN(n,list){return (list||OFFENCES).find(function(o){return o
    Written warning (R) = 3 months active; suspension/final warning (S#) = 6 months.
    Admonishment (A) is informal — not counted. Dismissal (D) closes employment.
    After the window with no new case, the warning expires and no longer counts. */
-export var TODAY = '2026-09-15';
+export var TODAY = '2026-06-21';
 export function windowMonths(code){
   if(!code) return 0;
   if(code==='R') return 3;
@@ -38,11 +40,29 @@ export function activeWarning(c, today){
   return !isExpired(c, today);
 }
 
+export function offList(c){
+  if(c.offences && c.offences.length) return c.offences;
+  return [{ off:c.off, occ:c.occ, rec:c.rec, decision:c.decision, smtRec:c.smtRec }];
+}
+export function worstCode(codes){
+  var best=null, bi=-1;
+  (codes||[]).forEach(function(x){ var i=PEN_ORDER.indexOf(x); if(i>bi){bi=i;best=x;} });
+  return best;
+}
+function entryActive(c,e,today){
+  var code = e.decision || c.decision; var m = windowMonths(code);
+  if(!m) return false;
+  var base = c.decisionDate || c.noticeDate || c.raised; if(!base) return false;
+  var d = new Date(base); d.setMonth(d.getMonth()+m);
+  return new Date(today||TODAY) <= d;
+}
 export function occurrenceFor(empId,offN,CASES){
-  // count only prior closed cases whose warning is still active (not expired)
-  var prior=CASES.filter(function(c){
-    return c.empId===empId && c.off===offN && c.status==='Closed' && activeWarning(c);
-  }).length;
+  // count prior Closed cases (any offence line) for this offence whose warning is still in its active window
+  var prior=0;
+  CASES.forEach(function(c){
+    if(c.empId!==empId || c.status!=='Closed') return;
+    offList(c).forEach(function(e){ if(+e.off===+offN && entryActive(c,e)) prior++; });
+  });
   return prior+1;
 }
 
