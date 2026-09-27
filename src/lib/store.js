@@ -24,8 +24,9 @@ export function useStore() {
   const [emps,  setEmps]  = useState(() => initial?.emps  ?? SEED_EMP.map(e => ({ ...e })));
   const [cats,  setCats]  = useState(() => initial?.cats ?? [...SEED_CATS]);
   const [propItems, setPropItems] = useState(() => initial?.propItems ?? [...SEED_PROP]);
-  const [settings, setSettings] = useState(() => initial?.settings ?? { written: 3, suspension: 6 });
+  const [settings, setSettings] = useState(() => initial?.settings ?? { written: 3, suspension: 6, counselOutcomes: ['Resolved','Verbal admonishment'], juryFindings: ['Substantiated','Partly substantiated','Not substantiated'] });
   setExpiry(settings);
+  if(!settings.counselOutcomes || !settings.juryFindings){ /* migrate */ }
   const [offs,  setOffs]  = useState(() => initial?.offs  ?? SEED_OFF.map(o => ({ ...o })));
   const [logs,  setLogs]  = useState(() => initial?.logs  ?? []);
   const [couns, setCouns] = useState(() => initial?.couns ?? [
@@ -278,7 +279,7 @@ export function useStore() {
       setCouns([]);
       setCats([...SEED_CATS]);
       setPropItems([...SEED_PROP]);
-      setSettings({ written: 3, suspension: 6 }); setExpiry({ written: 3, suspension: 6 });
+      setSettings({ written: 3, suspension: 6, counselOutcomes: ['Resolved','Verbal admonishment'], juryFindings: ['Substantiated','Partly substantiated','Not substantiated'] }); setExpiry({ written: 3, suspension: 6 });
     }
   }, []);
 

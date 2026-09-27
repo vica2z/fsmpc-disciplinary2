@@ -523,8 +523,7 @@ function CounsellingModal({ store, rec, onClose }) {
       <div className="form-grid">
         <Field label="Outcome">
           <select className="input" value={f.outcome} onChange={set('outcome')}>
-            <option value="Resolved">Resolved — no further action</option>
-            <option value="Verbal admonishment">Verbal admonishment (oral warning on file)</option>
+            {(store.settings?.counselOutcomes || ['Resolved','Verbal admonishment']).map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </Field>
         <Field label="Date"><input type="date" className="input" value={f.date} onChange={set('date')} /></Field>
@@ -1186,9 +1185,7 @@ function JuryModal({ store, c, onClose }) {
             <Field label="Finding">
               <select className="input" value={finding} onChange={ev => setFinding(ev.target.value)}>
                 <option value="">— Select —</option>
-                <option value="Substantiated">Substantiated</option>
-                <option value="Partly substantiated">Partly substantiated</option>
-                <option value="Not substantiated">Not substantiated</option>
+                {(store.settings?.juryFindings || ['Substantiated','Partly substantiated','Not substantiated']).map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Recommended action (within range)">
@@ -2183,6 +2180,29 @@ function OffenceModal({ store, off, onClose }) {
   );
 }
 
+function ListEditor({ items, onChange, placeholder, addTip }) {
+  const [val, setVal] = useState(''); const [editing, setEditing] = useState(null); const [ev, setEv] = useState('');
+  function add() { const v = val.trim(); if (!v) return; if (items.some(x => x.toLowerCase() === v.toLowerCase())) { alert('That option already exists.'); return; } onChange([...items, v]); setVal(''); }
+  function rename(old, nv) { const v = (nv || '').trim(); if (!v) return; onChange(items.map(x => x === old ? v : x)); setEditing(null); }
+  function remove(x) { if (items.length <= 1) { alert('Keep at least one option.'); return; } if (confirm(`Remove “${x}”?`)) onChange(items.filter(i => i !== x)); }
+  return (
+    <div>
+      {items.map((x, i) => (
+        <div key={i} className="setup-row">
+          <span className="setup-check" style={{ background: '#E2DDD4', color: '#0D2B55' }}>{i + 1}</span>
+          {editing === x
+            ? <><input className="input" value={ev} onChange={e => setEv(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') rename(x, ev); }} autoFocus style={{ maxWidth: 320 }} /><div className="row-actions"><button className="btn btn-sm btn-navy" onClick={() => rename(x, ev)}>Save</button><button className="btn btn-sm btn-ghost" onClick={() => setEditing(null)}>Cancel</button></div></>
+            : <><div className="setup-t" style={{ flex: 1 }}>{x}</div><div className="row-actions"><button className="btn btn-sm btn-ghost" onClick={() => { setEditing(x); setEv(x); }}>Edit</button><button className="btn btn-sm btn-danger" onClick={() => remove(x)}>Remove</button></div></>}
+        </div>
+      ))}
+      <div className="wit-add" style={{ marginTop: 10 }}>
+        <input className="input" placeholder={placeholder} value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+        <TipBtn tip={addTip} className="btn btn-navy" onClick={add}>+ Add</TipBtn>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════ HR SETTINGS — case expiry / active window ═══════════ */
 function HRSettings({ store }) {
   const s = store.settings || { written: 3, suspension: 6 };
@@ -2209,6 +2229,12 @@ function HRSettings({ store }) {
           <button className="btn btn-ghost" disabled={!dirty} onClick={() => { setW(s.written); setSp(s.suspension); }}>Reset</button>
           <TipBtn tip="Save the active-window lengths. Every case recalculates its expiry immediately." className="btn btn-navy" onClick={() => { store.updateSettings({ written: +w || 0, suspension: +sp || 0 }); }}>Save settings</TipBtn>
         </div>
+      </Card>
+      <Card title="Counselling outcomes" sub="The options a line manager can choose when logging counselling">
+        <ListEditor items={store.settings?.counselOutcomes || []} onChange={list => store.updateSettings({ counselOutcomes: list })} placeholder="e.g. Resolved" addTip="Add a counselling outcome option." />
+      </Card>
+      <Card title="Jury of Peers findings" sub="The finding options a jury panel can record">
+        <ListEditor items={store.settings?.juryFindings || []} onChange={list => store.updateSettings({ juryFindings: list })} placeholder="e.g. Substantiated" addTip="Add a jury finding option." />
       </Card>
       <Card title="Current effect" sub="Based on today's date in this review build">
         <div className="setup-row"><span className="setup-check">✓</span><div><div className="setup-t">Written warning window: {s.written} month{s.written === 1 ? '' : 's'}</div><div className="sub">Suspension / final warning window: {s.suspension} month{s.suspension === 1 ? '' : 's'}</div></div></div>
