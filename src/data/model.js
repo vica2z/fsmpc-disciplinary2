@@ -359,6 +359,11 @@ export const SEED_CASES=[
 /* Per-panel guide — a short "how this panel works" shown on every screen,
    written from the FSMPC disciplinary procedure. */
 export const PANEL_GUIDE = {
+  'hr-settings': { title: 'How Settings works', role: 'hr', points: [
+    'Set the active window for warnings — how long a written warning or a suspension/final warning stays on record before it expires.',
+    'When the window passes with no new case, the warning expires and no longer counts toward occurrence (clean slate).',
+    'Changing these values updates every case automatically.',
+  ] },
   'ceo-reinstate': {
     title: 'How Re-instatement works',
     role: 'ceo',
@@ -557,7 +562,7 @@ export const PANEL_GUIDE = {
 export const ROLE_NAV = {
   ict:   [ {id:'setup',label:'System Setup',icon:'⚙️'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'ict-settings',label:'Settings',icon:'🛠️'}, {id:'audit',label:'Audit Log',icon:'🧾'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   lm:    [ {id:'lm-queue',label:'My Team',icon:'👤'}, {id:'lm-counsel',label:'Counselling',icon:'💬'}, {id:'lm-raise',label:'Raise a Case',icon:'➕'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
-  hr:    [ {id:'hr-queue',label:'HR Queue',icon:'📥'}, {id:'hr-all',label:'All Cases',icon:'📁'}, {id:'counsel-log',label:'Counselling Log',icon:'💬'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'report',label:'Weekly CEO Report',icon:'📋'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
+  hr:    [ {id:'hr-queue',label:'HR Queue',icon:'📥'}, {id:'hr-all',label:'All Cases',icon:'📁'}, {id:'counsel-log',label:'Counselling Log',icon:'💬'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'report',label:'Weekly CEO Report',icon:'📋'}, {id:'hr-settings',label:'Settings',icon:'🛠️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   staff: [ {id:'staff-notices',label:'My Notices',icon:'✉️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   ceo:   [ {id:'ceo-referrals',label:'Referrals',icon:'📨'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'ceo-reinstate',label:'Re-instatement',icon:'♻️'}, {id:'report',label:'Weekly Report',icon:'📋'}, {id:'counsel-log',label:'Counselling Log',icon:'💬'}, {id:'audit',label:'Audit Log',icon:'🧾'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   smt:   [ {id:'smt-queue',label:'SMT Referrals',icon:'🏛️'}, {id:'smt-decided',label:'Recommended',icon:'✅'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],

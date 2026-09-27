@@ -13,10 +13,12 @@ export function offByN(n,list){return (list||OFFENCES).find(function(o){return o
    Admonishment (A) is informal — not counted. Dismissal (D) closes employment.
    After the window with no new case, the warning expires and no longer counts. */
 export var TODAY = '2026-06-21';
+export var EXPIRY = { written: 3, suspension: 6 };
+export function setExpiry(cfg){ if(cfg){ if(cfg.written!=null) EXPIRY.written=+cfg.written; if(cfg.suspension!=null) EXPIRY.suspension=+cfg.suspension; } }
 export function windowMonths(code){
   if(!code) return 0;
-  if(code==='R') return 3;
-  if(code[0]==='S') return 6;
+  if(code==='R') return EXPIRY.written;
+  if(code[0]==='S') return EXPIRY.suspension;
   return 0; // A = informal, D = terminal
 }
 export function caseExpiry(c){

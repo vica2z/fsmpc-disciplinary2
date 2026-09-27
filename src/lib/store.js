@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { SEED_CASES, EMP as SEED_EMP, OFFENCES as SEED_OFF, CATS as SEED_CATS, PROPERTY_ITEMS as SEED_PROP } from '../data/model';
+import { setExpiry } from './logic';
 import { occurrenceFor } from './logic';
 
 /* Persistent store for the review build.
@@ -23,6 +24,8 @@ export function useStore() {
   const [emps,  setEmps]  = useState(() => initial?.emps  ?? SEED_EMP.map(e => ({ ...e })));
   const [cats,  setCats]  = useState(() => initial?.cats ?? [...SEED_CATS]);
   const [propItems, setPropItems] = useState(() => initial?.propItems ?? [...SEED_PROP]);
+  const [settings, setSettings] = useState(() => initial?.settings ?? { written: 3, suspension: 6 });
+  setExpiry(settings);
   const [offs,  setOffs]  = useState(() => initial?.offs  ?? SEED_OFF.map(o => ({ ...o })));
   const [logs,  setLogs]  = useState(() => initial?.logs  ?? []);
   const [couns, setCouns] = useState(() => initial?.couns ?? [
@@ -42,8 +45,8 @@ export function useStore() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem(LS, JSON.stringify({ cases, emps, offs, cats, propItems, logs, couns })); } catch (e) { /* ignore */ }
-  }, [cases, emps, offs, cats, propItems, logs, couns]);
+    try { localStorage.setItem(LS, JSON.stringify({ cases, emps, offs, cats, propItems, settings, logs, couns })); } catch (e) { /* ignore */ }
+  }, [cases, emps, offs, cats, propItems, settings, logs, couns]);
 
   /* ---- CASES ---- */
   const nextCaseId = useCallback((list) => {
@@ -261,6 +264,11 @@ export function useStore() {
     log('ict', null, 'Removed property item: ' + name);
   }, [log]);
 
+  const updateSettings = useCallback((patch) => {
+    setSettings(prev => { const next = { ...prev, ...patch }; setExpiry(next); return next; });
+    log('hr', null, 'Updated case expiry settings');
+  }, [log]);
+
   const resetAll = useCallback(() => {
     if (confirm('Reset all cases, employees and charges back to the sample data?')) {
       setCases(SEED_CASES.map(c => ({ ...c })));
@@ -270,18 +278,19 @@ export function useStore() {
       setCouns([]);
       setCats([...SEED_CATS]);
       setPropItems([...SEED_PROP]);
+      setSettings({ written: 3, suspension: 6 }); setExpiry({ written: 3, suspension: 6 });
     }
   }, []);
 
   return {
-    cases, emps, offs, cats, propItems, logs, couns,
+    cases, emps, offs, cats, propItems, settings, logs, couns,
     submitCase, submitCaseMulti, updateDraftMulti, updateCase, deleteCase,
     issueNotice, recordResponse, recordDecision, lodgeAppeal, ceoRuling, submitToHR, saveInvestigation, saveJury, saveProperty,
     forwardToCEO, forwardToSMT, smtRecommend, ceoDecideReferral, reinstateEmployee,
     addCounselling, updateCounselling, deleteCounselling, escalateCounselling, escalateCounsellingMulti,
     flagSerious, acknowledgeSerious,
     addEmp, updateEmp, deleteEmp,
-    addOff, updateOff, deleteOff, addCat, addPropItem, renamePropItem, removePropItem,
+    addOff, updateOff, deleteOff, addCat, addPropItem, renamePropItem, removePropItem, updateSettings,
     resetAll,
   };
 }

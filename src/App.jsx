@@ -3,7 +3,7 @@ import { OFFENCES, CATS, CAT_ICON, EMP, EXECUTIVES, SMT_MEMBERS, APPRAISAL_STATU
 import {
   offByN, occurrenceFor, occLabel, rangeForOcc,
   penClass, penFull, optionsInRange, rangeChips, empById,
-  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths, offList, worstCode, responseDue,
+  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths, offList, worstCode, responseDue, EXPIRY,
 } from './lib/logic';
 import { useStore } from './lib/store';
 
@@ -208,6 +208,7 @@ export default function App() {
 
         {/* ICT */}
         {view === 'ict-settings' && <ICTSettings store={store} />}
+        {view === 'hr-settings' && <HRSettings store={store} />}
         {view === 'setup' && <Setup store={store} />}
         {view === 'employees' && <Employees store={store} />}
         {view === 'audit' && <AuditLog store={store} />}
@@ -2179,6 +2180,41 @@ function OffenceModal({ store, off, onClose }) {
       </div>
       <Field label="Special note (optional)"><input className="input" value={note} onChange={e => setNote(e.target.value)} /></Field>
     </Modal>
+  );
+}
+
+/* ═══════════ HR SETTINGS — case expiry / active window ═══════════ */
+function HRSettings({ store }) {
+  const s = store.settings || { written: 3, suspension: 6 };
+  const [w, setW] = useState(s.written);
+  const [sp, setSp] = useState(s.suspension);
+  const dirty = +w !== +s.written || +sp !== +s.suspension;
+  const closed = store.cases.filter(c => c.status === 'Closed');
+  const activeCount = closed.filter(c => activeWarning(c)).length;
+  return (
+    <div className="page">
+      <PageHead title="Settings" info="Set how long warnings stay active before they expire (the clean-slate rule)." sub="Case expiry — active window for warnings" />
+      <GuideBanner view="hr-settings" />
+      <Card title="Active window" sub="How long a warning counts toward the next occurrence before it expires">
+        <div className="form-grid">
+          <Field label="Written warning — active for (months)">
+            <input type="number" min={0} max={60} className="input" value={w} onChange={e => setW(e.target.value)} />
+          </Field>
+          <Field label="Suspension / final warning — active for (months)">
+            <input type="number" min={0} max={60} className="input" value={sp} onChange={e => setSp(e.target.value)} />
+          </Field>
+        </div>
+        <p className="hint">Verbal admonishment is informal (no window). Dismissal is terminal. Set a value to 0 to make that type never expire.</p>
+        <div className="form-actions">
+          <button className="btn btn-ghost" disabled={!dirty} onClick={() => { setW(s.written); setSp(s.suspension); }}>Reset</button>
+          <TipBtn tip="Save the active-window lengths. Every case recalculates its expiry immediately." className="btn btn-navy" onClick={() => { store.updateSettings({ written: +w || 0, suspension: +sp || 0 }); }}>Save settings</TipBtn>
+        </div>
+      </Card>
+      <Card title="Current effect" sub="Based on today's date in this review build">
+        <div className="setup-row"><span className="setup-check">✓</span><div><div className="setup-t">Written warning window: {s.written} month{s.written === 1 ? '' : 's'}</div><div className="sub">Suspension / final warning window: {s.suspension} month{s.suspension === 1 ? '' : 's'}</div></div></div>
+        <div className="setup-row"><span className="setup-check" style={{ background: '#1E40AF' }}>{activeCount}</span><div><div className="setup-t">Closed cases with an active warning right now</div><div className="sub">of {closed.length} closed cases; the rest have expired or carry no window.</div></div></div>
+      </Card>
+    </div>
   );
 }
 
