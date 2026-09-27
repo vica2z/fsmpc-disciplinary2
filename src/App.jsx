@@ -207,6 +207,7 @@ export default function App() {
         )}
 
         {/* ICT */}
+        {view === 'ict-settings' && <ICTSettings store={store} />}
         {view === 'setup' && <Setup store={store} />}
         {view === 'employees' && <Employees store={store} />}
         {view === 'audit' && <AuditLog store={store} />}
@@ -398,8 +399,9 @@ function PropertyModal({ store, c, onClose }) {
   const e = empById(c.empId, emps);
   const existing = c.property?.items;
   const [items, setItems] = useState(
-    existing && existing.length ? existing
-      : PROPERTY_ITEMS.map(label => ({ label, returned: false, note: '' }))
+    Array.isArray(existing) && existing.length
+      ? [...existing, ...(store.propItems || []).filter(l => !existing.some(x => x.label === l)).map(label => ({ label, returned: false, note: '' }))]
+      : (store.propItems || PROPERTY_ITEMS).map(label => ({ label, returned: false, note: '' }))
   );
   const [ackName, setAckName] = useState(c.property?.ackName || '');
   const toggle = i => setItems(list => list.map((it, idx) => idx === i ? { ...it, returned: !it.returned } : it));
@@ -980,7 +982,7 @@ function LetterModal({ store, c, onClose }) {
       foot={<><button className="btn btn-ghost" onClick={onClose}>Close</button><button className="btn btn-navy" onClick={printLetter}>🖨 Print / Save PDF</button></>}>
       <div id="disc-letter" className="letter">
         <div className="letter-head">
-          <div><b>FIJI SUGAR / FSMPC</b><div className="sub">Human Resources Office</div></div>
+          <div><b>FSMPC</b><div className="sub">Human Resources Office</div></div>
           <div className="sub" style={{ textAlign: 'right' }}>Ref: {c.id}<br />Date: {today}</div>
         </div>
         <h1>Notice of Disciplinary {decided ? 'Decision' : 'Charge'}</h1>
@@ -2135,31 +2137,92 @@ function CategoryModal({ store, onClose }) {
     </Modal>
   );
 }
+const PEN_SHORT = { A: 'Verbal', R: 'Written', S3: '3 days', S10: '10 days', S20: '20 days', D: 'Dismiss' };
 function OffenceModal({ store, off, onClose }) {
   const isNew = !off;
   const [name, setName] = useState(off?.name || '');
   const [cat, setCat] = useState(off?.cat || store.cats[0]);
   const [note, setNote] = useState(off?.note || '');
-  const toStr = p => (p || []).map(pr => pr[0] === pr[1] ? pr[0] : `${pr[0]}-${pr[1]}`).join(', ');
-  const [pText, setPText] = useState(off ? toStr(off.p) : 'A-R, R-S3, S10-D');
-  function parseP(s) { return s.split(',').map(t => t.trim()).filter(Boolean).map(t => { const x = t.split('-').map(y => y.trim()); return x.length === 1 ? [x[0], x[0]] : [x[0], x[1]]; }); }
+  const init = [0, 1, 2].map(i => { const pr = off?.p?.[i] || off?.p?.[off?.p?.length - 1]; return pr ? [pr[0], pr[1]] : [['A', 'R'], ['R', 'S3'], ['S10', 'D']][i]; });
+  const [ranges, setRanges] = useState(init);
+  const setR = (i, j, v) => setRanges(rs => rs.map((r2, k) => {
+    if (k !== i) return r2;
+    const n = [...r2]; n[j] = v;
+    // keep From ≤ To
+    if (PEN_ORDER.indexOf(n[0]) > PEN_ORDER.indexOf(n[1])) { if (j === 0) n[1] = n[0]; else n[0] = n[1]; }
+    return n;
+  }));
   function save() {
     if (!name.trim()) { alert('Enter the offence description.'); return; }
-    const p = parseP(pText); const bad = p.flat().find(code => !PEN_ORDER.includes(code));
-    if (bad) { alert(`“${bad}” is not a valid code. Use: ${PEN_ORDER.join(', ')}.`); return; }
-    const patch = { name: name.trim(), cat, p, note: note.trim() || undefined };
+    const patch = { name: name.trim(), cat, p: ranges.map(r2 => [r2[0], r2[1]]), note: note.trim() || undefined };
     if (isNew) store.addOff(patch); else store.updateOff(off.n, patch);
     onClose();
   }
+  const occ = ['1st occurrence', '2nd occurrence', '3rd + occurrence'];
   return (
     <Modal title={isNew ? 'Add offence' : `Edit offence #${off.n}`} onClose={onClose}
       foot={<><button className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-navy" onClick={save}>{isNew ? 'Add' : 'Save'}</button></>}>
       <Field label="Offence description"><textarea className="input" rows={2} value={name} onChange={e => setName(e.target.value)} /></Field>
       <Field label="Category"><select className="input" value={cat} onChange={e => setCat(e.target.value)}>{store.cats.map(c => <option key={c}>{c}</option>)}</select></Field>
-      <Field label="Penalty ranges — 1st, 2nd, 3rd"><input className="input" value={pText} onChange={e => setPText(e.target.value)} placeholder="e.g. A-R, R-S3, S10-D" /></Field>
-      <p className="hint">Codes: A, R, S3/S10/S20, D. Single code (D) or range (R-S3). One per occurrence.</p>
+      <div className="inv-section">
+        <div className="inv-title">Penalty ranges <InfoTip text="For each occurrence choose the lightest (From) and heaviest (To) penalty allowed. Pick the same code in both for a fixed penalty. From can’t be heavier than To." /></div>
+        {ranges.map((r2, i) => (
+          <div key={i} className="range-row">
+            <span className="range-lbl">{occ[i]}</span>
+            <select className="input" aria-label="From" value={r2[0]} onChange={e => setR(i, 0, e.target.value)}>{PEN_ORDER.map(x => <option key={x} value={x}>{x} · {PEN_SHORT[x]}</option>)}</select>
+            <span className="sub">to</span>
+            <select className="input" aria-label="To" value={r2[1]} onChange={e => setR(i, 1, e.target.value)}>{PEN_ORDER.map(x => <option key={x} value={x} disabled={PEN_ORDER.indexOf(x) < PEN_ORDER.indexOf(r2[0])}>{x} · {PEN_SHORT[x]}</option>)}</select>
+            <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(r2) }} />
+          </div>
+        ))}
+        <p className="hint">A = verbal warning · R = written warning · S3/S10/S20 = suspension days · D = dismissal.</p>
+      </div>
       <Field label="Special note (optional)"><input className="input" value={note} onChange={e => setNote(e.target.value)} /></Field>
     </Modal>
+  );
+}
+
+/* ═══════════ ICT SETTINGS — property checklist items ═══════════ */
+function ICTSettings({ store }) {
+  const [name, setName] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editVal, setEditVal] = useState('');
+  const items = store.propItems || [];
+  function add() {
+    const n = name.trim(); if (!n) return;
+    if (items.some(x => x.toLowerCase() === n.toLowerCase())) { alert('That item is already in the list.'); return; }
+    store.addPropItem(n); setName('');
+  }
+  return (
+    <div className="page">
+      <PageHead title="Settings" info="System lists that ICT Admin maintains. Changes apply straight away and are recorded in the Audit Log." sub="Company property checklist used on dismissal" />
+      <Card title="Property items" sub={`${items.length} items — the Line Manager ticks these off when a dismissed employee returns company property`}>
+        <table className="table">
+          <thead><tr><th>#</th><th>Item</th><th></th></tr></thead>
+          <tbody>
+            {items.map((it, i) => (
+              <tr key={it}>
+                <td className="mono">{i + 1}</td>
+                <td>{editing === it
+                  ? <input className="input" value={editVal} onChange={e => setEditVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { store.renamePropItem(it, editVal); setEditing(null); } }} autoFocus />
+                  : it}</td>
+                <td className="row-actions">
+                  {editing === it
+                    ? <><button className="btn btn-sm btn-navy" onClick={() => { if (editVal.trim()) store.renamePropItem(it, editVal); setEditing(null); }}>Save</button><button className="btn btn-sm btn-ghost" onClick={() => setEditing(null)}>Cancel</button></>
+                    : <><TipBtn tip="Rename this item." className="btn btn-sm btn-ghost" onClick={() => { setEditing(it); setEditVal(it); }}>Edit</TipBtn>
+                      <TipBtn tip="Remove this item from the checklist. Items already recorded on past cases are kept." className="btn btn-sm btn-danger" onClick={() => { if (confirm(`Remove “${it}” from the checklist?`)) store.removePropItem(it); }}>Remove</TipBtn></>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="wit-add" style={{ marginTop: 12 }}>
+          <input className="input" placeholder="New item, e.g. Radio" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} />
+          <TipBtn tip="Add a new item to the property checklist." className="btn btn-navy" dt="add-prop" onClick={add}>+ Add item</TipBtn>
+        </div>
+        <p className="hint">Removing or renaming an item doesn’t change checklists already saved on past cases.</p>
+      </Card>
+    </div>
   );
 }
 

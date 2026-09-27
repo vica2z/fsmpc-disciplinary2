@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { SEED_CASES, EMP as SEED_EMP, OFFENCES as SEED_OFF, CATS as SEED_CATS } from '../data/model';
+import { SEED_CASES, EMP as SEED_EMP, OFFENCES as SEED_OFF, CATS as SEED_CATS, PROPERTY_ITEMS as SEED_PROP } from '../data/model';
 import { occurrenceFor } from './logic';
 
 /* Persistent store for the review build.
@@ -22,6 +22,7 @@ export function useStore() {
   const [cases, setCases] = useState(() => initial?.cases ?? SEED_CASES.map(c => ({ ...c })));
   const [emps,  setEmps]  = useState(() => initial?.emps  ?? SEED_EMP.map(e => ({ ...e })));
   const [cats,  setCats]  = useState(() => initial?.cats ?? [...SEED_CATS]);
+  const [propItems, setPropItems] = useState(() => initial?.propItems ?? [...SEED_PROP]);
   const [offs,  setOffs]  = useState(() => initial?.offs  ?? SEED_OFF.map(o => ({ ...o })));
   const [logs,  setLogs]  = useState(() => initial?.logs  ?? []);
   const [couns, setCouns] = useState(() => initial?.couns ?? [
@@ -41,8 +42,8 @@ export function useStore() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem(LS, JSON.stringify({ cases, emps, offs, cats, logs, couns })); } catch (e) { /* ignore */ }
-  }, [cases, emps, offs, logs, couns]);
+    try { localStorage.setItem(LS, JSON.stringify({ cases, emps, offs, cats, propItems, logs, couns })); } catch (e) { /* ignore */ }
+  }, [cases, emps, offs, cats, propItems, logs, couns]);
 
   /* ---- CASES ---- */
   const nextCaseId = useCallback((list) => {
@@ -244,6 +245,22 @@ export function useStore() {
     setCats(prev => prev.some(c => c.toLowerCase() === n.toLowerCase()) ? prev : [...prev, n]);
   }, []);
 
+  const addPropItem = useCallback((name) => {
+    const n = (name || '').trim(); if (!n) return false;
+    let ok = true;
+    setPropItems(prev => { if (prev.some(x => x.toLowerCase() === n.toLowerCase())) { ok = false; return prev; } return [...prev, n]; });
+    log('ict', null, 'Added property item: ' + n); return ok;
+  }, [log]);
+  const renamePropItem = useCallback((oldName, name) => {
+    const n = (name || '').trim(); if (!n) return;
+    setPropItems(prev => prev.map(x => x === oldName ? n : x));
+    log('ict', null, 'Renamed property item: ' + oldName + ' → ' + n);
+  }, [log]);
+  const removePropItem = useCallback((name) => {
+    setPropItems(prev => prev.filter(x => x !== name));
+    log('ict', null, 'Removed property item: ' + name);
+  }, [log]);
+
   const resetAll = useCallback(() => {
     if (confirm('Reset all cases, employees and charges back to the sample data?')) {
       setCases(SEED_CASES.map(c => ({ ...c })));
@@ -252,18 +269,19 @@ export function useStore() {
       setLogs([]);
       setCouns([]);
       setCats([...SEED_CATS]);
+      setPropItems([...SEED_PROP]);
     }
   }, []);
 
   return {
-    cases, emps, offs, cats, logs, couns,
+    cases, emps, offs, cats, propItems, logs, couns,
     submitCase, submitCaseMulti, updateDraftMulti, updateCase, deleteCase,
     issueNotice, recordResponse, recordDecision, lodgeAppeal, ceoRuling, submitToHR, saveInvestigation, saveJury, saveProperty,
     forwardToCEO, forwardToSMT, smtRecommend, ceoDecideReferral, reinstateEmployee,
     addCounselling, updateCounselling, deleteCounselling, escalateCounselling, escalateCounsellingMulti,
     flagSerious, acknowledgeSerious,
     addEmp, updateEmp, deleteEmp,
-    addOff, updateOff, deleteOff, addCat,
+    addOff, updateOff, deleteOff, addCat, addPropItem, renamePropItem, removePropItem,
     resetAll,
   };
 }

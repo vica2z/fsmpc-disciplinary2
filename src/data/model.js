@@ -555,7 +555,7 @@ export const PANEL_GUIDE = {
 
 /* Role-based navigation: each role sees only its own panels in the loop. */
 export const ROLE_NAV = {
-  ict:   [ {id:'setup',label:'System Setup',icon:'⚙️'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'audit',label:'Audit Log',icon:'🧾'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
+  ict:   [ {id:'setup',label:'System Setup',icon:'⚙️'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'ict-settings',label:'Settings',icon:'🛠️'}, {id:'audit',label:'Audit Log',icon:'🧾'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   lm:    [ {id:'lm-queue',label:'My Team',icon:'👤'}, {id:'lm-counsel',label:'Counselling',icon:'💬'}, {id:'lm-raise',label:'Raise a Case',icon:'➕'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   hr:    [ {id:'hr-queue',label:'HR Queue',icon:'📥'}, {id:'hr-all',label:'All Cases',icon:'📁'}, {id:'counsel-log',label:'Counselling Log',icon:'💬'}, {id:'charges',label:'Table of Charges',icon:'⚖️'}, {id:'report',label:'Weekly CEO Report',icon:'📋'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
   staff: [ {id:'staff-notices',label:'My Notices',icon:'✉️'}, {id:'howto',label:'How it works',icon:'ℹ️'} ],
