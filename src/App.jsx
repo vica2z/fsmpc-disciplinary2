@@ -2195,7 +2195,7 @@ function ListEditor({ items, onChange, placeholder, addTip }) {
             : <><div className="setup-t" style={{ flex: 1 }}>{x}</div><div className="row-actions"><button className="btn btn-sm btn-ghost" onClick={() => { setEditing(x); setEv(x); }}>Edit</button><button className="btn btn-sm btn-danger" onClick={() => remove(x)}>Remove</button></div></>}
         </div>
       ))}
-      <div className="wit-add" style={{ marginTop: 10 }}>
+      <div className="wit-add list-add" style={{ marginTop: 10 }}>
         <input className="input" placeholder={placeholder} value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
         <TipBtn tip={addTip} className="btn btn-navy" onClick={add}>+ Add</TipBtn>
       </div>
@@ -2278,7 +2278,7 @@ function ICTSettings({ store }) {
             ))}
           </tbody>
         </table>
-        <div className="wit-add" style={{ marginTop: 12 }}>
+        <div className="wit-add list-add" style={{ marginTop: 12 }}>
           <input className="input" placeholder="New item, e.g. Radio" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} />
           <TipBtn tip="Add a new item to the property checklist." className="btn btn-navy" dt="add-prop" onClick={add}>+ Add item</TipBtn>
         </div>

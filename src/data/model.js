@@ -360,9 +360,11 @@ export const SEED_CASES=[
    written from the FSMPC disciplinary procedure. */
 export const PANEL_GUIDE = {
   'hr-settings': { title: 'How Settings works', role: 'hr', points: [
-    'Set the active window for warnings — how long a written warning or a suspension/final warning stays on record before it expires.',
-    'When the window passes with no new case, the warning expires and no longer counts toward occurrence (clean slate).',
-    'Changing these values updates every case automatically.',
+    'Case expiry — set how long a written warning (default 3 months) or a suspension/final warning (default 6 months) stays active. 0 = never expires.',
+    'When the window passes with no new case, the warning expires and no longer counts toward occurrence (clean slate). Changing a value updates every case at once.',
+    'Counselling outcomes — add, rename or remove the options a line manager picks when logging counselling.',
+    'Jury of Peers findings — add, rename or remove the finding options a jury panel can record.',
+    'Every change is saved to the Audit Log.',
   ] },
   'ceo-reinstate': {
     title: 'How Re-instatement works',
