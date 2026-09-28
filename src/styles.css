@@ -377,3 +377,6 @@ h1 .infotip-bubble{font-size:12px}
 /* stronger: settings add-row tooltip opens upward, right-aligned */
 .list-add .tipbtn .infotip-bubble{top:auto !important;bottom:160% !important;right:0 !important;left:auto !important}
 .list-add .tipbtn .infotip-bubble::before{top:auto !important;bottom:-5px !important;left:auto !important;right:6px !important;border-bottom:none !important;border-top:6px solid var(--navy) !important}
+
+/* Settings list add-row: input + button only (not the 3-col witness grid) */
+.wit-add.list-add{grid-template-columns:1fr auto}

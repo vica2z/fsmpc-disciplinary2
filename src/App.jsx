@@ -46,8 +46,8 @@ export default function App() {
     { t: 'HR · HR Queue', d: 'Cases needing action, in order: Investigate → Issue notice → Record response → Record decision. A red banner appears if a serious offence is reported. Serious cases can be forwarded to the CEO or SMT.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
     { t: 'Button · Investigate / action', d: 'This is the main action button for the case at the top of the queue. Depending on the case stage it reads Investigate, Issue notice, Record response, or Record decision — the next step HR must take.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"hr-action\"]' },
     { t: 'Button · Jury of Peers', d: 'On an investigated serious case, this convenes the impartial peer panel and records its finding and recommendation.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"jury\"]' },
-    { t: 'Button · Forward to CEO', d: 'Sends the case directly to the CEO for a final decision (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-ceo\"]' },
-    { t: 'Button · Forward to SMT', d: 'Sends the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-smt\"]' },
+    { t: 'Button · Forward to CEO', d: 'After the employee has responded, HR can forward the case directly to the CEO for the final decision, with HR’s own recommendation.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-ceo\"]' },
+    { t: 'Button · Forward to SMT', d: 'After the response, HR can forward to a chosen SMT member, who recommends an action to the CEO.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"fwd-smt\"]' },
     { t: 'Button · Issue notice', d: 'After the investigation, HR issues the official notice. The employee sees it in My Notices and has 5 working days to respond (their response is considered before the decision).', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"issue-notice\"]' },
     { t: 'Button · Letter', d: 'Generates the formatted disciplinary notice for the case — auto-filled and printable.', role: 'hr', view: 'hr-queue', sel: '[data-tour=\"letter\"]' },
     { t: 'HR · Investigation', d: 'Before any notice, HR investigates: findings, discussion with the line manager and employee, witnesses (name + statement), and uploaded document/image evidence. Only after saving can a notice be issued.', role: 'hr', view: 'hr-queue', nav: 'HR Queue' },
@@ -877,7 +877,7 @@ function HRQueue({ store }) {
   const actionFor = c => c.status === 'With HR'
       ? (c.investigation ? { label: 'Issue notice', to: 'Awaiting Response' } : { label: 'Investigate', to: 'investigate' })
     : c.status === 'Awaiting Response' ? { label: 'Record response', to: 'Awaiting Decision' }
-    : { label: 'Record decision', to: 'Closed' };
+    : null;
   return (
     <div className="page">
       <PageHead title="HR Queue" info="Cases needing HR action, in order: investigate, issue notice, record response, then decision." sub="Cases awaiting HR action, in workflow order" />
@@ -926,11 +926,15 @@ function HRQueue({ store }) {
                         <TipBtn tip="Re-open the saved investigation to review or edit findings, witnesses and evidence." className="btn btn-sm btn-ghost" onClick={() => setInvestigating(c)}>Investigation</TipBtn>
                         <TipBtn tip="Issue the official notice to the employee. It appears in their My Notices and starts the 5 working-day response window." className="btn btn-sm btn-navy" dt="issue-notice" onClick={() => setActing({ c, action: { label: 'Issue notice', to: 'Awaiting Response' } })}>Issue notice</TipBtn>
                         <TipBtn tip="Activate an impartial peer panel to give an independent finding and recommendation on a serious case." dt="jury" className="btn btn-sm btn-ghost" onClick={() => setJuring(c)}>{c.jury?.active ? 'Jury ✓' : 'Jury of Peers'}</TipBtn>
-                        <TipBtn tip="Send the case straight to the CEO for a final decision (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-ceo" onClick={() => setForwarding({ c, to: 'CEO' })}>Forward to CEO</TipBtn>
-                        <TipBtn tip="Send the case to a chosen SMT member for a recommendation to the CEO (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-smt" onClick={() => setForwarding({ c, to: 'SMT' })}>Forward to SMT</TipBtn>
                       </>}
-                      {c.status !== 'With HR' &&
-                        <TipBtn tip="Issue notice starts the 5-day response window; Record response captures the employee\u2019s reply; Record decision sets the final action and closes the case." className="btn btn-sm btn-navy" onClick={() => setActing({ c, action: na })}>{na.label}</TipBtn>}
+                      {na && c.status === 'Awaiting Response' &&
+                        <TipBtn tip="Record the employee\u2019s reply to the notice. The case then goes to HR to forward to the CEO or SMT for the final decision." className="btn btn-sm btn-navy" onClick={() => setActing({ c, action: na })}>{na.label}</TipBtn>}
+                      {c.status === 'Awaiting Decision' && <>
+                        <TipBtn tip="Convene an impartial peer panel for an independent finding and recommendation (advisory)." dt="jury" className="btn btn-sm btn-ghost" onClick={() => setJuring(c)}>{c.jury?.active ? 'Jury ✓' : 'Jury of Peers'}</TipBtn>
+                        <TipBtn tip="Forward the case to a chosen SMT member, who recommends an action to the CEO (HR recommendation required)." className="btn btn-sm btn-navy" dt="fwd-smt" onClick={() => setForwarding({ c, to: 'SMT' })}>Forward to SMT</TipBtn>
+                        <TipBtn tip="Forward the case directly to the CEO with HR\u2019s recommendation. The CEO makes the final decision." className="btn btn-sm btn-navy" dt="fwd-ceo" onClick={() => setForwarding({ c, to: 'CEO' })}>Forward to CEO</TipBtn>
+                        <span className="sub" style={{ width: '100%' }}>The CEO makes the final decision on every case.</span>
+                      </>}
                       {['Awaiting Response','Awaiting Decision','Closed'].includes(c.status) &&
                         <TipBtn tip="Generate a formatted disciplinary notice, auto-filled from the case, to print or save as PDF." className="btn btn-sm btn-ghost" dt="letter" onClick={() => setLettering(c)}>Letter</TipBtn>}
                       {c.status === 'Closed' &&
@@ -2197,7 +2201,7 @@ function ListEditor({ items, onChange, placeholder, addTip }) {
       ))}
       <div className="wit-add list-add" style={{ marginTop: 10 }}>
         <input className="input" placeholder={placeholder} value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
-        <TipBtn tip={addTip} className="btn btn-navy" onClick={add}>+ Add</TipBtn>
+        <button className="btn btn-navy" onClick={add}>+ Add</button>
       </div>
     </div>
   );
@@ -2428,8 +2432,8 @@ const HELP_KB = [
   { k: ['each offence','multiple offence decision','per offence'], a: 'When a case has more than one offence, each offence is decided on its own within its own penalty range (HR, SMT and CEO all pick an action per offence). The overall outcome — used for the PAF and payroll — is the most serious of them.' },
   { k: ['edit draft','draft'], a: 'Drafts can be edited: Line Manager → My Team → Edit on the draft. Change the employee, offences, statement or evidence, then save or submit to HR.' },
   { k: ['appeal'], a: 'There is no separate appeal process. The employee’s response is their opportunity to give their account before the decision is made — not an appeal after the fact.' },
-  { k: ['forward','smt','recommend'], a: 'For serious cases HR can forward to the CEO directly, or to the SMT. HR must give a recommendation. On the SMT route, the chosen SMT member also gives a mandatory recommendation. The CEO makes the final decision.' },
-  { k: ['ceo','final decision','decide'], a: 'The CEO is the final decision-maker on forwarded cases (sees HR and SMT recommendations). The CEO can also re-establish a previously terminated employee to payroll.' },
+  { k: ['forward','smt','recommend'], a: 'After the employee responds, HR forwards every case: directly to the CEO, or to a chosen SMT member. HR must give a recommendation; on the SMT route the SMT member also recommends. The CEO makes the final decision.' },
+  { k: ['ceo','final decision','decide','who decides','close case'], a: 'The CEO makes the final decision on every case. After the employee responds, HR forwards the case — directly to the CEO (with HR’s recommendation) or via the SMT (who recommend to the CEO). HR does not close cases itself. The CEO can also re-instate a terminated employee.' },
   { k: ['decision','close','outcome'], a: 'HR records the final decision within the offence range, which closes the case. On a dismissal, the Line Manager retrieves company property and HR generates the Personnel Action Form (PAF) for payroll.' },
   { k: ['paf','personnel','payroll'], a: 'The Personnel Action Form (PAF) is generated by HR on a closed case (All Cases → Personnel Form). It carries the action to payroll — e.g. suspension without pay or removal from payroll on dismissal.' },
   { k: ['property','retriev'], a: 'When a case ends in dismissal, the Line Manager records the return of company property (laptop, keys, ID, uniform, vehicle, etc.) via the checklist in My Team.' },
