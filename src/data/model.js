@@ -213,6 +213,11 @@ export const SEED_CASES=[
     'Fuel card':{returned:false,note:'Reported lost — card blocked'}},
    by:'Wayne Narruhn', savedAt:'2026-05-22'}},
 
+  {id:'DC-1044',empId:447,off:1,occ:1,rec:'A',status:'Closed',raised:'2026-05-04',noticeDate:'2026-05-05',decisionDate:'2026-05-12',
+  desc:'Arrived 35 minutes late without notifying the supervisor.',
+  response:'Bus was delayed; I did not have credit to call.',
+  decision:'A', outcome:'Admonishment (verbal warning) on file'},
+
  /* Awaiting Response — notice issued, investigation done, letter available */
  {id:'DC-1051',empId:447,off:1,occ:2,rec:'R',status:'Awaiting Response',raised:'2026-06-15',
   desc:'Arrived more than 40 minutes late on three occasions in June without notifying the supervisor.',
@@ -224,7 +229,7 @@ export const SEED_CASES=[
    files:[], savedAt:'2026-06-16'}},
 
  /* With HR — investigated, ready to forward or notice */
- {id:'DC-1048',empId:446,fromCounselling:'CN-2004',off:8,occ:1,rec:'S10',status:'With HR',raised:'2026-06-12',
+ {id:'DC-1048',empId:446,fromCounselling:'CN-2004',off:8,occ:2,rec:'S10',status:'With HR',raised:'2026-06-12',
   desc:'Worked in the server room without the required anti-static and safety equipment despite reminders.',
   serious:true,
   investigation:{findings:'Employee entered the server room on 11 June without anti-static wrist strap or safety footwear. Two prior verbal reminders are on record.',
@@ -275,10 +280,10 @@ export const SEED_CASES=[
   appeal:'On-call vehicle use was never put in writing, and other on-call staff have used vehicles at weekends without action.'},
 
  /* With SMT — waiting on an SMT recommendation */
- {id:'DC-1056',empId:628,off:21,occ:2,rec:'S3',status:'With SMT',raised:'2026-06-17',
+ {id:'DC-1056',empId:628,off:21,occ:1,rec:'S3',status:'With SMT',raised:'2026-06-17',
   desc:'Refused a direct instruction to complete a safety check and used abusive language toward the shift supervisor in front of other staff.',
   serious:true, seriousAck:true,
-  investigation:{findings:'Two witnesses confirm the instruction was given clearly and refused, followed by abusive language. This is the second such incident in twelve months.',
+  investigation:{findings:'Two witnesses confirm the instruction was given clearly and refused, followed by abusive language. A previous incident was raised informally last year.',
    lmDiscuss:'Shift supervisor confirmed the instruction was a routine safety check.',
    staffDiscuss:'Employee acknowledged raising his voice but disputes the wording alleged.',
    witnesses:[{name:'Nikson Garoa',note:'Heard the refusal and the language used.'},

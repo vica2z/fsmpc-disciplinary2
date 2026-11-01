@@ -10,7 +10,7 @@ export function offByN(n,list){return (list||OFFENCES).find(function(o){return o
 
 /* Active-window / clean-slate rules.
    Written warning (R) = 3 months active; suspension/final warning (S#) = 6 months.
-   Admonishment (A) is informal — not counted. Dismissal (D) closes employment.
+   Admonishment (A) counts for the written-warning window. Dismissal (D) closes employment.
    After the window with no new case, the warning expires and no longer counts. */
 export var TODAY = '2026-06-21';
 export var EXPIRY = { written: 3, suspension: 6 };
@@ -18,8 +18,9 @@ export function setExpiry(cfg){ if(cfg){ if(cfg.written!=null) EXPIRY.written=+c
 export function windowMonths(code){
   if(!code) return 0;
   if(code==='R') return EXPIRY.written;
+  if(code==='A') return EXPIRY.written; // verbal warning on file counts for the written-warning window
   if(code[0]==='S') return EXPIRY.suspension;
-  return 0; // A = informal, D = terminal
+  return 0; // D = terminal
 }
 export function caseExpiry(c){
   var action = c.decision || c.rec;
