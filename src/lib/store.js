@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { SEED_CASES, EMP as SEED_EMP, OFFENCES as SEED_OFF, CATS as SEED_CATS, PROPERTY_ITEMS as SEED_PROP } from '../data/model';
-import { setExpiry, withOcc } from './logic';
+import { setExpiry, withOcc, offList } from './logic';
 import { occurrenceFor } from './logic';
 
 /* Persistent store for the review build.
@@ -280,8 +280,20 @@ export function useStore() {
     }
   }, []);
 
+  /* Open cases recalculate occurrence live (a decision on an earlier case raises it),
+     and flag any earlier still-open case for the same offence. Closed cases keep their record. */
+  const liveCases = useMemo(() => cases.map(c => {
+    if (c.status === 'Closed') return c;
+    const others = cases.filter(o => o.id !== c.id);
+    const list = withOcc(c.empId, offList(c).map(x => ({ off: x.off, rec: x.rec })), others)
+      .map((l, i) => ({ ...offList(c)[i], occ: l.occ }));
+    const pendingSame = others.filter(o => o.empId === c.empId && o.status !== 'Closed' && o.status !== 'Draft'
+      && (o.raised || '') <= (c.raised || '') && offList(o).some(y => list.some(l => +l.off === +y.off))).map(o => o.id);
+    return { ...c, occ: list[0]?.occ ?? c.occ, offences: c.offences ? list : c.offences, pendingSame };
+  }), [cases]);
+
   return {
-    cases, emps, offs, cats, propItems, settings, logs, couns,
+    cases: liveCases, emps, offs, cats, propItems, settings, logs, couns,
     submitCase, submitCaseMulti, updateDraftMulti, updateCase, deleteCase,
     issueNotice, recordResponse, recordDecision, lodgeAppeal, ceoRuling, submitToHR, saveInvestigation, saveJury, saveProperty,
     forwardToCEO, forwardToSMT, smtRecommend, ceoDecideReferral, reinstateEmployee,

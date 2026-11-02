@@ -914,7 +914,7 @@ function HRQueue({ store }) {
                     <td className="mono">{c.id}{c.serious && <div style={{marginTop:4}}><span className="pill st-serious">⚠ Serious</span></div>}</td>
                     <td><b>{e?.name}</b><div className="sub">{e?.title}</div></td>
                     <td><OffenceCell c={c} offs={offs} /></td>
-                    <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}</td>
+                    <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}{c.pendingSame?.length > 0 && <div className="sub" style={{color:"#B45309",marginTop:4}} title="Another case for the same offence is still open. When it is decided, this occurrence updates automatically.">⏳ {c.pendingSame.join(", ")} pending</div>}</td>
                     <td dangerouslySetInnerHTML={{ __html: caseLines(c, offs).map(l => rangeChips(l.pair)).join('<br/>') }} />
                     <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span><DueTag c={c} /></td>
                     <td className="row-actions">
@@ -1396,7 +1396,7 @@ function HRAll({ store }) {
                   <td className="mono">{c.id}</td>
                   <td><b>{e.name}</b></td>
                   <td><OffenceCell c={c} offs={offs} /></td>
-                  <td>{occSummary(c)}</td>
+                  <td>{occSummary(c)}{c.pendingSame?.length > 0 && <div className="sub" style={{color:"#B45309",marginTop:4}} title="Another case for the same offence is still open. When it is decided, this occurrence updates automatically.">⏳ {c.pendingSame.join(", ")} pending</div>}</td>
                   <td><span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span></td>
                   <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.outcome && <div className="sub">{c.outcome}</div>}</td>
                   <td className="row-actions">
@@ -1850,7 +1850,7 @@ function ExecDiscipline({ store, execId }) {
                     <td><b>{e?.name}</b><div className="sub">{e?.title}</div></td>
                     <td>{e?.dept}</td>
                     <td><OffenceCell c={c} offs={offs} /></td>
-                    <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}</td>
+                    <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}{c.pendingSame?.length > 0 && <div className="sub" style={{color:"#B45309",marginTop:4}} title="Another case for the same offence is still open. When it is decided, this occurrence updates automatically.">⏳ {c.pendingSame.join(", ")} pending</div>}</td>
                     <td><span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span></td>
                     <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.outcome && <div className="sub">{c.outcome}</div>}</td>
                   </tr>
