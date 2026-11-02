@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { SEED_CASES, EMP as SEED_EMP, OFFENCES as SEED_OFF, CATS as SEED_CATS, PROPERTY_ITEMS as SEED_PROP } from '../data/model';
-import { setExpiry } from './logic';
+import { setExpiry, withOcc } from './logic';
 import { occurrenceFor } from './logic';
 
 /* Persistent store for the review build.
@@ -75,10 +75,7 @@ export function useStore() {
     let newId;
     setCases(prev => {
       newId = nextCaseId(prev);
-      const list = offences.map(o => {
-        const occ = occurrenceFor(+empId, +o.off, prev);
-        return { off: +o.off, occ, rec: o.rec };
-      });
+      const list = withOcc(+empId, offences, prev);
       const first = list[0] || {};
       return [{
         id: newId, empId: +empId,
@@ -95,7 +92,7 @@ export function useStore() {
   const updateDraftMulti = useCallback((id, empId, offences, desc, date, asDraft, serious, lmFiles) => {
     setCases(prev => {
       const others = prev.filter(c => c.id !== id);
-      const list = offences.map(o => ({ off: +o.off, occ: occurrenceFor(+empId, +o.off, others), rec: o.rec }));
+      const list = withOcc(+empId, offences, others);
       const f = list[0] || {};
       return prev.map(c => c.id === id ? { ...c, empId: +empId, off: f.off, occ: f.occ, rec: f.rec, offences: list,
         status: asDraft ? 'Draft' : 'With HR', raised: date || c.raised, desc: desc || '', serious: !!serious, lmFiles: lmFiles || [] } : c);
@@ -214,7 +211,7 @@ export function useStore() {
     const cn = couns.find(c => c.id === counsId); if (!cn) return;
     setCases(prev => {
       newCaseId = nextCaseId(prev);
-      const list = offences.map(o => ({ off: +o.off, occ: occurrenceFor(cn.empId, +o.off, prev), rec: o.rec }));
+      const list = withOcc(cn.empId, offences, prev);
       const first = list[0] || {};
       return [{
         id: newCaseId, empId: cn.empId, off: first.off, occ: first.occ, rec: first.rec, offences: list,

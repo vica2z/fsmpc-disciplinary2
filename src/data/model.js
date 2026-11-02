@@ -251,10 +251,10 @@ export const SEED_CASES=[
   appeal:'The log does not separate break periods from working hours, and my output was never below target.'},
 
  /* Closed — dismissal */
- {id:'DC-1064',empId:446,off:8,occ:2,rec:'S10',status:'Closed',raised:'2026-05-30',
-  desc:'Second instance of working in the server room without required PPE, this time causing a minor electrostatic incident.',
+ {id:'DC-1064',empId:446,off:8,occ:1,rec:'S10',status:'Closed',raised:'2026-05-30',
+  desc:'Worked in the server room without required PPE, causing a minor electrostatic incident.',
   noticeDate:'2026-05-31', appealDate:'2026-06-12', serious:true, seriousAck:true,
-  investigation:{findings:'Employee entered the server room on 29 May without anti-static equipment; a static discharge damaged a network switch. This is the second PPE breach on record.',
+  investigation:{findings:'Employee entered the server room on 29 May without anti-static equipment; a static discharge damaged a network switch. Verbal reminders on PPE had been given previously.',
    lmDiscuss:'ICT Manager confirmed PPE was available and the earlier written warning was explained.',
    staffDiscuss:'Employee stated he was in a hurry to restore a service outage and skipped the wrist strap.',
    witnesses:[{name:'Berny Etse',note:'Present when the discharge occurred; confirmed no PPE was worn.'},

@@ -3,7 +3,7 @@ import { OFFENCES, CATS, CAT_ICON, EMP, EXECUTIVES, SMT_MEMBERS, APPRAISAL_STATU
 import {
   offByN, occurrenceFor, occLabel, rangeForOcc,
   penClass, penFull, optionsInRange, rangeChips, empById,
-  fmtDate, statusClass, activeWarning, isExpired, caseExpiry, windowMonths, offList, worstCode, responseDue, EXPIRY,
+  fmtDate, statusClass, caseLines, caseOptions, occSummary, activeWarning, isExpired, caseExpiry, windowMonths, offList, worstCode, responseDue, EXPIRY,
 } from './lib/logic';
 import { useStore } from './lib/store';
 
@@ -915,7 +915,7 @@ function HRQueue({ store }) {
                     <td><b>{e?.name}</b><div className="sub">{e?.title}</div></td>
                     <td><OffenceCell c={c} offs={offs} /></td>
                     <td>{caseOffences(c).map(x=>occLabel(x.occ)).join(", ")}</td>
-                    <td dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} />
+                    <td dangerouslySetInnerHTML={{ __html: caseLines(c, offs).map(l => rangeChips(l.pair)).join('<br/>') }} />
                     <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span><DueTag c={c} /></td>
                     <td className="row-actions">
                       {c.status === 'Awaiting Response' && c.noticeDate && responseDue(c.noticeDate) < 0 &&
@@ -1119,12 +1119,17 @@ function PAFModal({ store, c, onClose }) {
 
 
 /* Personnel Action Form (PAF) — generated on the final decision, printable */
+
+function OccRanges({ c, offs }) {
+  const ls = caseLines(c, offs);
+  return <>{ls.map((l, i) => <div key={i}><span className="sub">{ls.length > 1 ? `Offence ${i + 1} occurrence:` : 'Occurrence:'}</span> {occLabel(l.x.occ || 1)} — range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(l.pair) }} /></div>)}</>;
+}
 /* Jury of Peers — activate a peer panel for serious cases */
 function JuryModal({ store, c, onClose }) {
   const { emps, offs } = store;
   const e = empById(c.empId, emps), o = offByN(c.off, offs);
   const pair = o ? rangeForOcc(o, c.occ) : null;
-  const opts = optionsInRange(pair);
+  const opts = caseOptions(c, offs);
   const j0 = c.jury || {};
   const [active, setActive] = useState(j0.active || false);
   const [members, setMembers] = useState(j0.members || []);
@@ -1211,7 +1216,7 @@ function ForwardModal({ store, c, to, onClose }) {
   const { emps, offs } = store;
   const e = empById(c.empId, emps), o = offByN(c.off, offs);
   const pair = o ? rangeForOcc(o, c.occ) : null;
-  const opts = optionsInRange(pair);
+  const opts = caseOptions(c, offs);
   const [note, setNote] = useState('');
   const [member, setMember] = useState('');
   const [rec, setRec] = useState('');
@@ -1391,7 +1396,7 @@ function HRAll({ store }) {
                   <td className="mono">{c.id}</td>
                   <td><b>{e.name}</b></td>
                   <td><OffenceCell c={c} offs={offs} /></td>
-                  <td>{occLabel(c.occ)}</td>
+                  <td>{occSummary(c)}</td>
                   <td><span className={'chip ' + penClass(c.decision || c.rec)}>{c.decision || c.rec}</span></td>
                   <td><span className={'pill ' + statusClass(c.status)}>{c.status}</span>{c.outcome && <div className="sub">{c.outcome}</div>}</td>
                   <td className="row-actions">
@@ -1595,7 +1600,7 @@ function CEOReferrals({ store }) {
         return (
           <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
-              <div><span className="sub">Occurrence:</span> {occLabel(c.occ)} — range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
+              <OccRanges c={c} offs={offs} />
               <div><span className="sub">Route:</span> {c.smtRec ? `HR → SMT → CEO${c.smtMember ? ` (${c.smtMember})` : ''}` : 'HR → CEO (direct)'}</div>
               {c.hrRec && <div><span className="sub">HR recommends:</span> <span className={'chip ' + penClass(c.hrRec)}>{c.hrRec}</span> {penFull(c.hrRec)}</div>}
               {c.hrNote && <div className="notice-quote">HR rationale: “{c.hrNote}”</div>}
@@ -1664,7 +1669,7 @@ function CEOReinstate({ store }) {
         return (
           <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
-              <div><span className="sub">Dismissed for:</span> {o?.name} — {occLabel(c.occ)} occurrence</div>
+              <div><span className="sub">Dismissed for:</span> {offList(c).map(x => `${offByN(+x.off, offs)?.name} — ${occLabel(x.occ || 1)}`).join(' · ')} occurrence</div>
               {c.outcome && <div className="sub">{c.outcome}</div>}
               {c.reinstated && <div className="reinstate-note">♻ Re-established to payroll on {fmtDate(c.reinstateDate)}{c.reinstateReason ? ` — ${c.reinstateReason}` : ''}</div>}
             </div>
@@ -1876,7 +1881,7 @@ function SMTQueue({ store }) {
         return (
           <Card key={c.id} title={`${c.id} · ${e?.name}`} sub={offList(c).length > 1 ? offList(c).map(x => offByN(+x.off, offs)?.name).join(' · ') : o?.name}>
             <div className="notice-body">
-              <div><span className="sub">Occurrence:</span> {occLabel(c.occ)} — range <span className="pmatrix" dangerouslySetInnerHTML={{ __html: rangeChips(pair) }} /></div>
+              <OccRanges c={c} offs={offs} />
               {c.smtMember && <div><span className="sub">Assigned to:</span> {c.smtMember}</div>}
               {c.hrRec && <div><span className="sub">HR recommends:</span> <span className={'chip ' + penClass(c.hrRec)}>{c.hrRec}</span> {penFull(c.hrRec)}</div>}
               {c.hrNote && <div className="notice-quote">HR rationale: “{c.hrNote}”</div>}

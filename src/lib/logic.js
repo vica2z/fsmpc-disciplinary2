@@ -106,3 +106,19 @@ export function stageState(c,key){
 
 export function statusClass(s){ return s==='Draft'?'st-draft':s==='With HR'?'st-hr':s==='Awaiting Response'?'st-resp':s==='Under Appeal'?'st-appeal':s==='With SMT'?'st-smt':s==='With CEO'?'st-ceo':'st-closed'; }
 
+
+/* occurrence per offence line; a repeat of the same offence inside one case counts as the next occurrence */
+export function withOcc(empId, offences, CASES){
+  var seen={};
+  return offences.map(function(o){ var k=+o.off; seen[k]=(seen[k]||0); var occ=occurrenceFor(empId,k,CASES)+seen[k]; seen[k]++; return { off:k, occ:occ, rec:o.rec }; });
+}
+/* all offence lines of a case with their range */
+export function caseLines(c, offs){
+  return offList(c).map(function(x){ var o=offByN(+x.off,offs); return { x:x, o:o, pair:o?rangeForOcc(o,x.occ||1):null }; });
+}
+/* options across every offence range (for a single overall recommendation) */
+export function caseOptions(c, offs){
+  var set={}; caseLines(c,offs).forEach(function(l){ optionsInRange(l.pair).forEach(function(k){set[k]=1;}); });
+  return PEN_ORDER.filter(function(k){return set[k];});
+}
+export function occSummary(c){ return offList(c).map(function(x){return occLabel(x.occ||1);}).join(', '); }
